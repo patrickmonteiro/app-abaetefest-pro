@@ -1,4 +1,4 @@
-// nuxt.config.ts - Versão final corrigida
+// nuxt.config.ts - Forçar comportamento SSR
 import tailwindcss from "@tailwindcss/vite";
 
 export default defineNuxtConfig({
@@ -19,7 +19,7 @@ export default defineNuxtConfig({
 
   // TypeScript
   typescript: {
-    typeCheck: false // Desabilitar para build mais rápido
+    typeCheck: false
   },
 
   // Módulos essenciais
@@ -30,15 +30,38 @@ export default defineNuxtConfig({
     '@nuxt/eslint'
   ],
 
-  // Configuração SSR
+  // FORÇAR SSR
   ssr: true,
+  experimental: {
+    payloadExtraction: false
+  },
   
-  // Configuração para Netlify
+  // Configuração EXPLÍCITA para Netlify
   nitro: {
-    preset: 'netlify'
+    preset: 'netlify',
+    // Forçar diretórios corretos
+    output: {
+      dir: '.output',
+      serverDir: '.output/server',
+      publicDir: '.output/public'
+    },
+    // Garantir que é server-side
+    renderer: '@nuxt/kit',
+    // Log detalhado
+    logLevel: 4,
+    // Prerender apenas a home para garantir estrutura híbrida
+    prerender: {
+      routes: ['/']
+    },
+    // Configurações específicas Netlify
+    netlify: {
+      images: {
+        remotePatterns: []
+      }
+    }
   },
 
-  // SEO básico
+  // Garantir que não é modo SPA
   app: {
     head: {
       charset: 'utf-8',
@@ -57,13 +80,11 @@ export default defineNuxtConfig({
     ]
   },
 
-  // Configuração DaisyUI (se necessário personalizar)
-  tailwindcss: {
-    config: {
-      plugins: ['daisyui'],
-      daisyui: {
-        themes: ['light', 'dark', 'cupcake']
-      }
+  // DEBUG: Verificar se está em modo correto
+  hooks: {
+    'build:before': () => {
+      console.log('🚀 Build mode: SSR =', true)
+      console.log('🎯 Nitro preset:', 'netlify')
     }
   }
 })

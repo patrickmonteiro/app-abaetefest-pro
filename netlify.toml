@@ -1,16 +1,20 @@
-# netlify.toml
+# netlify.toml - Fallback usando dist (que existe)
 [build]
   command = "npm run build"
-  publish = ".output/public"
+  # Como dist existe, usar como publish directory
+  publish = "dist"
   
 [build.environment]
   NODE_VERSION = "18"  
   NPM_VERSION = "10"
+  # Forçar preset Netlify
+  NITRO_PRESET = "netlify"
 
-[[redirects]]
-  from = "/*"
-  to = "/.netlify/functions/server"
-  status = 200
+# Para site estático, sem redirects para functions
+# [[redirects]]
+#   from = "/*"
+#   to = "/index.html"
+#   status = 200
 
 [[headers]]
   for = "/sw.js"
