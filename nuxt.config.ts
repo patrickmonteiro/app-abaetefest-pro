@@ -1,4 +1,4 @@
-// nuxt.config.ts - Forçar comportamento SSR
+// nuxt.config.ts - Sem prerender para resolver o erro
 import tailwindcss from "@tailwindcss/vite";
 
 export default defineNuxtConfig({
@@ -30,38 +30,20 @@ export default defineNuxtConfig({
     '@nuxt/eslint'
   ],
 
-  // FORÇAR SSR
+  // Configuração SSR
   ssr: true,
-  experimental: {
-    payloadExtraction: false
-  },
   
-  // Configuração EXPLÍCITA para Netlify
+  // Configuração para Netlify SEM PRERENDER
   nitro: {
     preset: 'netlify',
-    // Forçar diretórios corretos
-    output: {
-      dir: '.output',
-      serverDir: '.output/server',
-      publicDir: '.output/public'
-    },
-    // Garantir que é server-side
-    renderer: '@nuxt/kit',
-    // Log detalhado
-    logLevel: 4,
-    // Prerender apenas a home para garantir estrutura híbrida
-    prerender: {
-      routes: ['/']
-    },
-    // Configurações específicas Netlify
-    netlify: {
-      images: {
-        remotePatterns: []
-      }
-    }
+    // REMOVER prerender que está causando erro
+    // prerender: {
+    //   routes: ['/']
+    // },
+    logLevel: 4
   },
 
-  // Garantir que não é modo SPA
+  // SEO básico
   app: {
     head: {
       charset: 'utf-8',
@@ -78,13 +60,5 @@ export default defineNuxtConfig({
     families: [
       { name: 'Inter', provider: 'google' }
     ]
-  },
-
-  // DEBUG: Verificar se está em modo correto
-  hooks: {
-    'build:before': () => {
-      console.log('🚀 Build mode: SSR =', true)
-      console.log('🎯 Nitro preset:', 'netlify')
-    }
   }
 })
