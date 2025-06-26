@@ -72,9 +72,9 @@ export default defineNuxtConfig({
   ssr: true,
 
   // Configuração de renderização
-  nitro: {
-    prerender: {
-      routes: ['/sitemap.xml']
-    }
-  },
+  // nitro: {
+  //   prerender: {
+  //     routes: ['/sitemap.xml']
+  //   }
+  // },
 })
