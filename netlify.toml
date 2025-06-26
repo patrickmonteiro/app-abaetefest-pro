@@ -1,10 +1,13 @@
 # netlify.toml
 [build]
-  command = "pnpm run build"
+  command = "npm run build"
   publish = ".output/public"
   
 [build.environment]
   NODE_VERSION = "18"
+  # Se quiser usar PNPM, descomente as linhas abaixo:
+  # PNPM_VERSION = "8"
+  # NPM_FLAGS = "--version" # Força uso do PNPM
 
 [[redirects]]
   from = "/*"

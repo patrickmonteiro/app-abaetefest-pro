@@ -1,5 +1,5 @@
 import { createRenderer, getRequestDependencies, getPreloadLinks, getPrefetchLinks } from 'vue-bundle-renderer/runtime';
-import { b as buildAssetsURL, u as useRuntimeConfig, d as defineRenderHandler, p as publicAssetsURL, g as getQuery, c as createError, a as getRouteRules, e as useNitroApp, f as getResponseStatusText, h as getResponseStatus } from '../nitro/nitro.mjs';
+import { b as buildAssetsURL, u as useRuntimeConfig, g as getResponseStatusText, a as getResponseStatus, d as defineRenderHandler, p as publicAssetsURL, c as getQuery, e as createError, f as getRouteRules, h as useNitroApp } from '../nitro/nitro.mjs';
 import { renderToString } from 'vue/server-renderer';
 import { createHead as createHead$1, propsToString, renderSSRHead } from 'unhead/server';
 import { stringify, uneval } from 'devalue';
@@ -82,7 +82,7 @@ function createHead(options = {}) {
   return head;
 }
 
-const appHead = {"meta":[{"name":"viewport","content":"width=device-width, initial-scale=1"},{"charset":"utf-8"},{"name":"description","content":"Aplicação Nuxt 3 com DaisyUI, TypeScript, PWA e SSR"},{"name":"format-detection","content":"telephone=no"},{"name":"msapplication-TileColor","content":"#ffffff"},{"name":"theme-color","content":"#ffffff"},{"name":"apple-mobile-web-app-capable","content":"yes"},{"name":"apple-mobile-web-app-status-bar-style","content":"default"}],"link":[{"rel":"icon","type":"image/x-icon","href":"/favicon.ico"},{"rel":"apple-touch-icon","href":"/apple-touch-icon.png"},{"rel":"mask-icon","href":"/safari-pinned-tab.svg","color":"#ffffff"}],"style":[],"script":[],"noscript":[],"charset":"utf-8","viewport":"width=device-width, initial-scale=1","title":"AbaetefestPro"};
+const appHead = {"meta":[{"name":"viewport","content":"width=device-width, initial-scale=1"},{"charset":"utf-8"},{"name":"description","content":"Aplicação Nuxt 3 com DaisyUI"}],"link":[],"style":[],"script":[],"noscript":[],"charset":"utf-8","viewport":"width=device-width, initial-scale=1","title":"AbaetefestPro"};
 
 const appRootTag = "div";
 
@@ -172,6 +172,17 @@ const getEntryIds = () => getClientManifest().then((r) => Object.values(r).filte
   )
 ).map((r2) => r2.src));
 
+function renderPayloadResponse(ssrContext) {
+  return {
+    body: stringify(splitPayload(ssrContext).payload, ssrContext._payloadReducers) ,
+    statusCode: getResponseStatus(ssrContext.event),
+    statusMessage: getResponseStatusText(ssrContext.event),
+    headers: {
+      "content-type": "application/json;charset=utf-8" ,
+      "x-powered-by": "Nuxt"
+    }
+  };
+}
 function renderPayloadJsonScript(opts) {
   const contents = opts.data ? stringify(opts.data, opts.ssrContext._payloadReducers) : "";
   const payload = {
@@ -193,6 +204,13 @@ function renderPayloadJsonScript(opts) {
       innerHTML: `window.__NUXT__={};window.__NUXT__.config=${config}`
     }
   ];
+}
+function splitPayload(ssrContext) {
+  const { data, prerenderedAt, ...initial } = ssrContext.payload;
+  return {
+    initial: { ...initial, prerenderedAt },
+    payload: { data, prerenderedAt }
+  };
 }
 
 const unheadOptions = {
@@ -243,6 +261,7 @@ globalThis.__publicAssetsURL = publicAssetsURL;
 const HAS_APP_TELEPORTS = !!(appTeleportAttrs.id);
 const APP_TELEPORT_OPEN_TAG = HAS_APP_TELEPORTS ? `<${appTeleportTag}${propsToString(appTeleportAttrs)}>` : "";
 const APP_TELEPORT_CLOSE_TAG = HAS_APP_TELEPORTS ? `</${appTeleportTag}>` : "";
+const PAYLOAD_URL_RE = /^[^?]*\/_payload.json(?:\?.*)?$/ ;
 const renderer = defineRenderHandler(async (event) => {
   const nitroApp = useNitroApp();
   const ssrError = event.path.startsWith("/__nuxt_error") ? getQuery(event) : null;
@@ -258,6 +277,12 @@ const renderer = defineRenderHandler(async (event) => {
   if (ssrError) {
     ssrError.statusCode &&= Number.parseInt(ssrError.statusCode);
     setSSRError(ssrContext, ssrError);
+  }
+  const isRenderingPayload = PAYLOAD_URL_RE.test(ssrContext.url);
+  if (isRenderingPayload) {
+    const url = ssrContext.url.substring(0, ssrContext.url.lastIndexOf("/")) || "/";
+    ssrContext.url = url;
+    event._path = event.node.req.url = url;
   }
   const routeOptions = getRouteRules(event);
   if (routeOptions.ssr === false) {
@@ -277,13 +302,17 @@ const renderer = defineRenderHandler(async (event) => {
     await ssrContext.nuxt?.hooks.callHook("app:error", _err);
     throw _err;
   });
-  const inlinedStyles = !ssrContext._renderResponse && true ? await renderInlineStyles(ssrContext.modules ?? []) : [];
+  const inlinedStyles = !ssrContext._renderResponse && !isRenderingPayload ? await renderInlineStyles(ssrContext.modules ?? []) : [];
   await ssrContext.nuxt?.hooks.callHook("app:rendered", { ssrContext, renderResult: _rendered });
   if (ssrContext._renderResponse) {
     return ssrContext._renderResponse;
   }
   if (ssrContext.payload?.error && !ssrError) {
     throw ssrContext.payload.error;
+  }
+  if (isRenderingPayload) {
+    const response = renderPayloadResponse(ssrContext);
+    return response;
   }
   const NO_SCRIPTS = routeOptions.noScripts;
   const { styles, scripts } = getRequestDependencies(ssrContext, renderer.rendererContext);

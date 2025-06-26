@@ -9,7 +9,7 @@ import { format } from 'node:url';
 import { isIP } from 'node:net';
 import { promises, statSync, createReadStream } from 'node:fs';
 import { basename } from 'node:path';
-import { k as klona, i as defuFn, c as createError$1, j as hasProtocol, l as isScriptProtocol, m as joinURL, w as withQuery, s as sanitizeStatusCode, n as getContext, o as baseURL, q as createHooks, r as executeAsync, t as withBase, v as destr, x as toRouteMatcher, y as createRouter$1, z as defu } from '../nitro/nitro.mjs';
+import { k as klona, i as defuFn, e as createError$1, j as hasProtocol, l as isScriptProtocol, m as joinURL, w as withQuery, s as sanitizeStatusCode, n as getContext, o as baseURL, q as createHooks, r as executeAsync, t as withBase, v as destr, x as toRouteMatcher, y as createRouter$1, z as defu } from '../nitro/nitro.mjs';
 import { RouterView, createMemoryHistory, createRouter, START_LOCATION } from 'vue-router';
 import { ssrRenderAttrs, ssrRenderComponent, ssrRenderSuspense, ssrRenderVNode } from 'vue/server-renderer';
 import { u as useHead$1, a as useSeoMeta$1, h as headSymbol } from '../routes/renderer.mjs';
@@ -4648,19 +4648,6 @@ const components_plugin_z4hgvsiddfKkfXTP6M8M4zG5Cb7sGnDhcryKVM45Di4 = /* @__PURE
     }
   }
 });
-const pwa_icons_plugin_C24GcIKjcI2zsa8A86om0L2LZjx1chWtzYxD11T7Txg = /* @__PURE__ */ defineNuxtPlugin(() => {
-  return {
-    provide: {
-      pwaIcons: {
-        transparent: {},
-        maskable: {},
-        favicon: {},
-        apple: {},
-        appleSplashScreen: {}
-      }
-    }
-  };
-});
 const matchIconName = /^[a-z0-9]+(-[a-z0-9]+)*$/;
 const stringToIcon = (value, validate2, allowSimpleName, provider = "") => {
   const colonSeparated = value.split(":");
@@ -6543,7 +6530,6 @@ const plugins = [
   plugin,
   revive_payload_server_o5f_CJMWU_yM7zEGhOfnrS2lPBqkEMY3GS8epND9RjY,
   components_plugin_z4hgvsiddfKkfXTP6M8M4zG5Cb7sGnDhcryKVM45Di4,
-  pwa_icons_plugin_C24GcIKjcI2zsa8A86om0L2LZjx1chWtzYxD11T7Txg,
   plugin_L1bozDJWmIZshP7Y4OdgGCMxiRYRRVZobkgIAq5_y6M
 ];
 const defineRouteProvider = (name = "RouteProvider") => defineComponent({

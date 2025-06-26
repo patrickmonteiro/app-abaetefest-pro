@@ -1,5 +1,5 @@
 {
-  "name": "nuxt-app",
+  "name": "abaetefest-pro",
   "private": true,
   "type": "module",
   "scripts": {
@@ -17,6 +17,7 @@
     "@nuxt/icon": "1.14.0",
     "@nuxt/image": "1.10.0",
     "@tailwindcss/vite": "^4.1.10",
+    "@vite-pwa/nuxt": "^1.0.4",
     "daisyui": "^5.0.43",
     "eslint": "^9.29.0",
     "nuxt": "^3.17.5",
@@ -25,7 +26,6 @@
     "vue-router": "^4.5.1"
   },
   "devDependencies": {
-    "@vite-pwa/nuxt": "^1.0.4",
     "vue-tsc": "^2.2.10"
   }
 }
