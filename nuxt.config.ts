@@ -33,9 +33,9 @@ export default defineNuxtConfig({
   ssr: true,
   
   // Configuração para Netlify
-  nitro: {
-    preset: 'netlify'
-  },
+  // nitro: {
+  //   preset: 'netlify'
+  // },
 
   // SEO básico
   app: {
