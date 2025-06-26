@@ -1,4 +1,4 @@
-// nuxt.config.ts - Versão simplificada para garantir build
+// nuxt.config.ts - Versão final corrigida
 import tailwindcss from "@tailwindcss/vite";
 
 export default defineNuxtConfig({
@@ -26,16 +26,17 @@ export default defineNuxtConfig({
   modules: [
     '@nuxt/fonts',
     '@nuxt/icon',
-    '@nuxt/image'
+    '@nuxt/image',
+    '@nuxt/eslint'
   ],
 
   // Configuração SSR
   ssr: true,
   
   // Configuração para Netlify
-  // nitro: {
-  //   preset: 'netlify'
-  // },
+  nitro: {
+    preset: 'netlify'
+  },
 
   // SEO básico
   app: {
@@ -54,5 +55,15 @@ export default defineNuxtConfig({
     families: [
       { name: 'Inter', provider: 'google' }
     ]
+  },
+
+  // Configuração DaisyUI (se necessário personalizar)
+  tailwindcss: {
+    config: {
+      plugins: ['daisyui'],
+      daisyui: {
+        themes: ['light', 'dark', 'cupcake']
+      }
+    }
   }
 })
