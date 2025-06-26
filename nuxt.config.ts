@@ -39,6 +39,9 @@ export default defineNuxtConfig({
     preset: 'netlify',
     experimental: {
       wasm: true
+    },
+    prerender: {
+      routes: ['/']
     }
   },
 
