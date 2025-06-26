@@ -1,47 +1,191 @@
-<!-- pages/index.vue -->
 <template>
-  <div class="min-h-screen bg-base-200">
-    <div class="navbar bg-primary text-primary-content">
-      <div class="flex-1">
-        <a class="btn btn-ghost normal-case text-xl">App AbaetefestPro</a>
+  <div class="min-h-screen bg-base-100">
+    <div class="container mx-auto px-4 py-8">
+      <!-- Header -->
+      <div class="text-center mb-8">
+        <h1 class="text-4xl font-bold text-primary mb-4">
+          AbaetefestPro
+        </h1>
+        <p class="text-lg text-base-content/70">
+          Aplicação PWA com Nuxt 3 + DaisyUI
+        </p>
       </div>
-    </div>
 
-    <div class="hero min-h-screen">
-      <div class="hero-content text-center">
-        <div class="max-w-md">
-          <h1 class="text-5xl font-bold">Funcionando! 🚀</h1>
-          <p class="py-6">Nuxt 3 + DaisyUI + TypeScript está configurado e rodando perfeitamente!</p>
-          
-          <div class="flex gap-2 justify-center">
-            <button class="btn btn-primary">Primary</button>
-            <button class="btn btn-secondary">Secondary</button>
-            <button class="btn btn-accent">Accent</button>
-          </div>
-          
-          <div class="mt-4">
-            <div class="alert alert-success">
-              <span>✅ Setup completo com sucesso!</span>
+      <!-- PWA Status Cards -->
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+        <div class="card bg-base-200 shadow-lg">
+          <div class="card-body">
+            <h2 class="card-title">
+              <Icon name="heroicons:device-phone-mobile" class="h-6 w-6" />
+              PWA Status
+            </h2>
+            <p class="text-sm">{{ pwaStatus }}</p>
+            <div class="card-actions justify-end">
+              <div class="badge badge-primary">{{ isOnline ? 'Online' : 'Offline' }}</div>
             </div>
           </div>
         </div>
+
+        <div class="card bg-base-200 shadow-lg">
+          <div class="card-body">
+            <h2 class="card-title">
+              <Icon name="heroicons:wifi" class="h-6 w-6" />
+              Conexão
+            </h2>
+            <p class="text-sm">{{ networkStatus }}</p>
+            <div class="card-actions justify-end">
+              <div :class="connectionClass">{{ connectionType }}</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card bg-base-200 shadow-lg">
+          <div class="card-body">
+            <h2 class="card-title">
+              <Icon name="heroicons:cog-6-tooth" class="h-6 w-6" />
+              Service Worker
+            </h2>
+            <p class="text-sm">{{ swStatus }}</p>
+            <div class="card-actions justify-end">
+              <div :class="swClass">{{ swState }}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Actions -->
+      <div class="text-center">
+        <button 
+          class="btn btn-primary btn-lg mr-4" 
+          @click="checkForUpdates"
+          :disabled="loading"
+        >
+          <Icon v-if="loading" name="heroicons:arrow-path" class="h-5 w-5 animate-spin" />
+          <Icon v-else name="heroicons:arrow-path" class="h-5 w-5" />
+          Verificar Atualizações
+        </button>
+        
+        <button class="btn btn-outline btn-lg" @click="showPWAInfo">
+          <Icon name="heroicons:information-circle" class="h-5 w-5" />
+          Info PWA
+        </button>
       </div>
     </div>
   </div>
 </template>
 
-<script setup lang="ts">
-// Configurações da página
-// definePageMeta({
-//   title: 'Home',
-//   description: 'Página inicial do meu app Nuxt'
-// })
+<script setup>
+import { ref, onMounted, computed } from 'vue'
+
+const isOnline = ref(true)
+const loading = ref(false)
+const serviceWorkerRegistration = ref(null)
+
+const pwaStatus = computed(() => {
+  if (process.client) {
+    return window.matchMedia('(display-mode: standalone)').matches 
+      ? 'Instalado como PWA' 
+      : 'Executando no navegador'
+  }
+  return 'Verificando...'
+})
+
+const networkStatus = computed(() => {
+  if (!process.client) return 'Verificando...'
+  return isOnline.value ? 'Conectado à internet' : 'Modo offline'
+})
+
+const connectionType = computed(() => {
+  if (!process.client) return 'Unknown'
+  const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection
+  return connection ? connection.effectiveType || 'Unknown' : 'Unknown'
+})
+
+const connectionClass = computed(() => {
+  const type = connectionType.value
+  return {
+    'badge badge-success': type === '4g',
+    'badge badge-warning': type === '3g',
+    'badge badge-error': type === '2g' || type === 'slow-2g',
+    'badge badge-ghost': type === 'Unknown'
+  }
+})
+
+const swStatus = computed(() => {
+  if (!serviceWorkerRegistration.value) return 'Não instalado'
+  return 'Ativo e funcionando'
+})
+
+const swState = computed(() => {
+  return serviceWorkerRegistration.value ? 'Ativo' : 'Inativo'
+})
+
+const swClass = computed(() => {
+  return serviceWorkerRegistration.value 
+    ? 'badge badge-success' 
+    : 'badge badge-error'
+})
+
+onMounted(() => {
+  // Monitor online/offline status
+  if (process.client) {
+    isOnline.value = navigator.onLine
+    
+    window.addEventListener('online', () => {
+      isOnline.value = true
+    })
+    
+    window.addEventListener('offline', () => {
+      isOnline.value = false
+    })
+
+    // Check for service worker
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.ready.then((registration) => {
+        serviceWorkerRegistration.value = registration
+      })
+    }
+  }
+})
+
+const checkForUpdates = async () => {
+  loading.value = true
+  
+  try {
+    if ('serviceWorker' in navigator) {
+      const registration = await navigator.serviceWorker.ready
+      await registration.update()
+      
+      // Show success message
+      // You can add a toast notification here
+      console.log('Verificação de atualização concluída')
+    }
+  } catch (error) {
+    console.error('Erro ao verificar atualizações:', error)
+  } finally {
+    loading.value = false
+  }
+}
+
+const showPWAInfo = () => {
+  // You can add a modal with PWA information here
+  alert(`
+PWA Info:
+- Status: ${pwaStatus.value}
+- Online: ${isOnline.value ? 'Sim' : 'Não'}
+- Service Worker: ${swState.value}
+- Conexão: ${connectionType.value}
+  `)
+}
 
 // SEO
-useSeoMeta({
-  title: 'Meu App Nuxt',
-  ogTitle: 'Meu App Nuxt',
-  description: 'Aplicação Nuxt 3 com DaisyUI, TypeScript, PWA e SSR',
-  ogDescription: 'Aplicação Nuxt 3 com DaisyUI, TypeScript, PWA e SSR',
+useHead({
+  title: 'AbaetefestPro - PWA with Nuxt 3',
+  meta: [
+    { name: 'description', content: 'Progressive Web App desenvolvida com Nuxt 3 e DaisyUI' },
+    { property: 'og:title', content: 'AbaetefestPro PWA' },
+    { property: 'og:description', content: 'Progressive Web App desenvolvida com Nuxt 3 e DaisyUI' },
+    { property: 'og:type', content: 'website' }
+  ]
 })
 </script>
