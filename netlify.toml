@@ -4,10 +4,8 @@
   publish = ".output/public"
   
 [build.environment]
-  NODE_VERSION = "18"
-  # Se quiser usar PNPM, descomente as linhas abaixo:
-  # PNPM_VERSION = "8"
-  # NPM_FLAGS = "--version" # Força uso do PNPM
+  NODE_VERSION = "18"  
+  NPM_VERSION = "10"
 
 [[redirects]]
   from = "/*"
