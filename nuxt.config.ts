@@ -1,4 +1,4 @@
-// nuxt.config.ts - Com PWA configurado
+// nuxt.config.ts - APENAS SSR (gera .output/public)
 import tailwindcss from "@tailwindcss/vite";
 
 export default defineNuxtConfig({
@@ -29,57 +29,42 @@ export default defineNuxtConfig({
     '@nuxt/icon',
     '@nuxt/image',
     '@nuxt/eslint',
-    '@vite-pwa/nuxt' // ← PWA Module
+    '@vite-pwa/nuxt'
   ],
 
-  // Configuração SSR
+  // SSR verdadeiro
   ssr: true,
   
-  // Configuração para Netlify
+  // Configuração Nitro para Netlify SSR
   nitro: {
-    preset: 'netlify'
+    preset: 'netlify',
+    publicAssets: [
+      {
+        baseURL: '/',
+        dir: 'public'
+      }
+    ]
   },
 
-  // Configuração PWA
+  // Configuração PWA para SSR
   pwa: {
     registerType: 'autoUpdate',
+    
     workbox: {
-      navigateFallback: '/',
-      navigateFallbackDenylist: [
-        /^\/sw\.js$/,
-        /^\/workbox-.*\.js$/,
-        /^\/manifest\.webmanifest$/,
-        /^\/_nuxt\//,
-        /^\/api\//
-      ],
+      // SEM navigateFallback para SSR
       globPatterns: [
         '**/*.{js,css,html,png,svg,ico,jpg,jpeg,gif,webp,woff,woff2,ttf,eot}'
-      ],
-      globIgnores: [
-        '**/node_modules/**/*',
-        'sw.js',
-        'workbox-*.js'
       ],
       cleanupOutdatedCaches: true,
       skipWaiting: true,
       clientsClaim: true,
+      
       runtimeCaching: [
         {
           urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
           handler: 'CacheFirst',
           options: {
             cacheName: 'google-fonts-cache',
-            expiration: {
-              maxEntries: 10,
-              maxAgeSeconds: 60 * 60 * 24 * 365
-            }
-          }
-        },
-        {
-          urlPattern: /^https:\/\/fonts\.gstatic\.com\/.*/i,
-          handler: 'CacheFirst',
-          options: {
-            cacheName: 'gstatic-fonts-cache',
             expiration: {
               maxEntries: 10,
               maxAgeSeconds: 60 * 60 * 24 * 365
@@ -101,22 +86,21 @@ export default defineNuxtConfig({
           urlPattern: /\/_nuxt\/.*/,
           handler: 'CacheFirst',
           options: {
-            cacheName: 'nuxt-cache',
+            cacheName: 'nuxt-assets-cache',
             expiration: {
               maxEntries: 100,
               maxAgeSeconds: 60 * 60 * 24 * 365
             }
           }
         }
-      ],
-      // Configuração mais específica para o Nuxt 3
-      additionalManifestEntries: [],
-      mode: 'production'
+      ]
     },
+    
     client: {
       installPrompt: true,
-      periodicSyncForUpdates: 20 // Check for updates every 20 seconds
+      periodicSyncForUpdates: 20
     },
+    
     manifest: {
       name: 'AbaetefestPro',
       short_name: 'AbaetefestPro',
@@ -170,13 +154,13 @@ export default defineNuxtConfig({
         }
       ]
     },
+    
     devOptions: {
-      enabled: true, // Enable PWA in development
+      enabled: true,
       type: 'module'
     }
   },
 
-  // SEO básico
   app: {
     head: {
       charset: 'utf-8',
@@ -195,7 +179,6 @@ export default defineNuxtConfig({
     }
   },
 
-  // Configuração de fontes
   fonts: {
     families: [
       { name: 'Inter', provider: 'google' }

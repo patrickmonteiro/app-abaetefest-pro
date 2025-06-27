@@ -1,8 +1,8 @@
-# netlify.toml - Configuração para Nuxt 3 PWA (usando dist)
+# netlify.toml - Configuração para Nuxt 3 SSR + PWA
 [build]
-  command = "npm run build"
-  # Agora o Nuxt está gerando em dist/
-  publish = "dist"
+  command = "npm run build:ssr"
+  # Nuxt 3 com preset netlify gera em .output/public
+  publish = ".output/public"
   
 [build.environment]
   NODE_VERSION = "18"  
@@ -27,49 +27,39 @@
     Content-Type = "application/javascript"
     Cache-Control = "public, max-age=0, must-revalidate"
 
+# Cache para assets do Nuxt
 [[headers]]
   for = "/_nuxt/*"
   [headers.values]
     Cache-Control = "public, max-age=31536000, immutable"
 
+# Cache para ícones
 [[headers]]
   for = "/icons/*"
   [headers.values]
     Cache-Control = "public, max-age=31536000, immutable"
 
-# Redirect para SPA (importante para PWA)
+# Headers de segurança para PWA
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "DENY"
+    X-XSS-Protection = "1; mode=block"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+
+# Função para roteamento SSR (Netlify Functions)
+[functions]
+  directory = ".output/server"
+
+# Redirects para SSR (importante - sem isso o SSR não funciona)
+[[redirects]]
+  from = "/_nuxt/*"
+  to = "/_nuxt/:splat"
+  status = 200
+
+# Fallback para páginas não encontradas (404)
 [[redirects]]
   from = "/*"
-  to = "/index.html"
-  status = 200ão para Nuxt 3 PWA
-[build]
-  command = "npm run build"
-  # Nuxt 3 gera em .output/public
-  publish = ".output/public"
-  
-[build.environment]
-  NODE_VERSION = "18"  
-  NPM_VERSION = "10"
-
-# Headers para PWA
-[[headers]]
-  for = "/manifest.webmanifest"
-  [headers.values]
-    Content-Type = "application/manifest+json"
-    Cache-Control = "public, max-age=0, must-revalidate"
-
-[[headers]]
-  for = "/sw.js"
-  [headers.values]
-    Content-Type = "application/javascript"
-    Cache-Control = "public, max-age=0, must-revalidate"
-
-[[headers]]
-  for = "/_nuxt/*"
-  [headers.values]
-    Cache-Control = "public, max-age=31536000, immutable"
-
-[[headers]]
-  for = "/icons/*"
-  [headers.values]
-    Cache-Control = "public, max-age=31536000, immutable"
+  to = "/.netlify/functions/index"
+  status = 200
