@@ -35,9 +35,9 @@ export default defineNuxtConfig({
   // SSR verdadeiro
   ssr: true,
   
-  // Configuração Nitro para Netlify SSR
+  // Configuração Nitro para Node.js (funciona no Netlify)
   nitro: {
-    preset: 'netlify',
+    preset: 'node-server',
     publicAssets: [
       {
         baseURL: '/',
