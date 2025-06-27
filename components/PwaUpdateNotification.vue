@@ -21,63 +21,89 @@
       </div>
     </div>
 
-    <!-- Install Prompt -->
+    <!-- Universal Install Prompt -->
     <div v-if="showInstallPrompt" class="fixed bottom-4 left-4 right-4 z-50">
-      <div class="alert alert-success shadow-lg">
+      <div class="alert shadow-lg" :class="alertClass">
         <div>
-          <Icon name="heroicons:device-phone-mobile" class="h-6 w-6" />
+          <Icon :name="iconName" class="h-6 w-6" />
           <div>
-            <h3 class="font-bold">{{ isSafari ? 'Adicionar à Tela Inicial' : 'Instalar App' }}</h3>
-            <div class="text-xs">
-              {{ isSafari 
-                ? 'Toque no botão de compartilhar e selecione "Adicionar à Tela de Início"' 
-                : 'Adicione este app à sua tela inicial para uma experiência melhor!' 
-              }}
-            </div>
+            <h3 class="font-bold">{{ installTitle }}</h3>
+            <div class="text-xs">{{ installMessage }}</div>
           </div>
         </div>
         <div class="flex-none">
           <button class="btn btn-sm btn-ghost" @click="dismissInstall">
-            {{ isSafari ? 'Entendi' : 'Não' }}
+            {{ browserInfo.installMethod === 'unsupported' ? 'OK' : 'Não agora' }}
           </button>
-          <button v-if="!isSafari" class="btn btn-sm btn-success" @click="installApp">
-            Instalar
-          </button>
-          <button v-if="isSafari" class="btn btn-sm btn-info" @click="showSafariInstructions">
-            Como fazer?
+          <button 
+            v-if="browserInfo.installMethod !== 'unsupported'" 
+            class="btn btn-sm" 
+            :class="buttonClass"
+            @click="installApp"
+          >
+            {{ installButtonText }}
           </button>
         </div>
       </div>
     </div>
 
-    <!-- Debug Panel (only in development) -->
+    <!-- Debug Panel (development only) -->
     <div v-if="isDev && showDebugPanel" class="fixed top-4 right-4 z-50">
-      <div class="card bg-base-100 shadow-lg w-80">
+      <div class="card bg-base-100 shadow-lg w-96">
         <div class="card-body p-4">
-          <h4 class="card-title text-sm">🔧 PWA Debug</h4>
-          <div class="text-xs space-y-1">
-            <div>Prompt Available: {{ promptAvailable ? '✅' : '❌' }}</div>
-            <div>Is Standalone: {{ isStandalone ? '✅' : '❌' }}</div>
-            <div>Browser: {{ browserName }}</div>
-            <div>Previously Dismissed: {{ wasDismissed ? '✅' : '❌' }}</div>
+          <h4 class="card-title text-sm flex items-center gap-2">
+            🔧 PWA Debug 
+            <div class="badge badge-sm" :class="browserInfo.supportsPWA ? 'badge-success' : 'badge-error'">
+              {{ browserInfo.name }}
+            </div>
+          </h4>
+          
+          <div class="text-xs space-y-2">
+            <!-- Browser Info -->
+            <div class="bg-base-200 p-2 rounded">
+              <div class="font-bold">Browser:</div>
+              <div>{{ browserInfo.name }} {{ browserInfo.version }}</div>
+              <div>Platform: {{ browserInfo.platform }}</div>
+              <div>Install Method: {{ browserInfo.installMethod }}</div>
+              <div>beforeinstallprompt: {{ browserInfo.supportsBeforeInstallPrompt ? '✅' : '❌' }}</div>
+            </div>
+
+            <!-- PWA Status -->
+            <div class="bg-base-200 p-2 rounded">
+              <div class="font-bold">PWA Status:</div>
+              <div>Install Available: {{ installAvailable ? '✅' : '❌' }}</div>
+              <div>Is Installed: {{ isInstalled ? '✅' : '❌' }}</div>
+              <div>Prompt Available: {{ promptAvailable ? '✅' : '❌' }}</div>
+              <div>Was Dismissed: {{ wasDismissed ? '✅' : '❌' }}</div>
+            </div>
+
+            <!-- Quick Actions -->
+            <div class="flex gap-2">
+              <button class="btn btn-xs btn-primary" @click="forceShowInstall">
+                Force Show
+              </button>
+              <button class="btn btn-xs btn-secondary" @click="checkStatus">
+                Check Status
+              </button>
+              <button class="btn btn-xs btn-accent" @click="clearStorage">
+                Clear Storage
+              </button>
+            </div>
           </div>
-          <div class="card-actions justify-end mt-2">
-            <button class="btn btn-xs btn-primary" @click="forceShowInstall">
-              Force Install
-            </button>
-            <button class="btn btn-xs btn-ghost" @click="showDebugPanel = false">
-              ✕
-            </button>
-          </div>
+          
+          <button class="btn btn-xs btn-ghost absolute top-2 right-2" @click="showDebugPanel = false">
+            ✕
+          </button>
         </div>
       </div>
     </div>
 
-    <!-- Debug Toggle (only in development) -->
+    <!-- Debug Toggle -->
     <button 
       v-if="isDev && !showDebugPanel" 
       class="fixed top-4 right-4 z-50 btn btn-xs btn-outline opacity-50 hover:opacity-100"
       @click="showDebugPanel = true"
+      title="PWA Debug"
     >
       🔧
     </button>
@@ -87,16 +113,27 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, nextTick } from 'vue'
 
+// Reactive state
 const showUpdatePrompt = ref(false)
 const showInstallPrompt = ref(false)
 const showDebugPanel = ref(false)
+const installAvailable = ref(false)
+const isInstalled = ref(false)
 const promptAvailable = ref(false)
-const isStandalone = ref(false)
-const browserName = ref('Unknown')
 const wasDismissed = ref(false)
 
-let deferredPrompt: any = null
+const browserInfo = ref({
+  name: 'Unknown',
+  version: 'Unknown',
+  platform: 'Unknown',
+  mobile: false,
+  supportsBeforeInstallPrompt: false,
+  supportsPWA: false,
+  installMethod: 'manual'
+})
+
 let updateSW: any = null
+let installMethod = 'manual'
 
 // Development check
 const isDev = computed(() => {
@@ -104,43 +141,153 @@ const isDev = computed(() => {
   return import.meta.dev || location.hostname === 'localhost'
 })
 
-// Detectar Safari (mais preciso)
-const isSafari = computed(() => {
-  if (!import.meta.client) return false
-  const ua = navigator.userAgent
-  return ua.includes('Safari') && !ua.includes('Chrome') && !ua.includes('Edg')
+// Dynamic UI based on browser/method
+const alertClass = computed(() => {
+  switch (browserInfo.value.installMethod) {
+    case 'unsupported':
+      return 'alert-warning'
+    case 'beforeinstallprompt':
+      return 'alert-success'
+    case 'ios-share':
+    case 'macos-share':
+      return 'alert-info'
+    default:
+      return 'alert-success'
+  }
 })
 
-const checkBrowserSupport = () => {
+const iconName = computed(() => {
+  switch (browserInfo.value.installMethod) {
+    case 'unsupported':
+      return 'heroicons:exclamation-triangle'
+    case 'ios-share':
+      return 'heroicons:share'
+    case 'macos-share':
+      return 'heroicons:share'
+    default:
+      return 'heroicons:device-phone-mobile'
+  }
+})
+
+const installTitle = computed(() => {
+  switch (browserInfo.value.installMethod) {
+    case 'unsupported':
+      return 'PWA não suportado'
+    case 'ios-share':
+      return 'Adicionar à Tela Inicial'
+    case 'macos-share':
+      return 'Adicionar ao Dock'
+    case 'beforeinstallprompt':
+      return 'Instalar App'
+    default:
+      return 'Instalar App'
+  }
+})
+
+const installMessage = computed(() => {
+  switch (browserInfo.value.installMethod) {
+    case 'unsupported':
+      return 'Firefox tem suporte limitado para PWAs. Use Chrome, Edge ou Safari para instalar.'
+    case 'ios-share':
+      return 'Use o botão compartilhar (⬆️) e selecione "Adicionar à Tela de Início"'
+    case 'macos-share':
+      return 'Use o botão compartilhar (⬆️) e selecione "Adicionar ao Dock"'
+    case 'beforeinstallprompt':
+      return 'Instale este app para uma experiência melhor!'
+    default:
+      return 'Adicione este app à sua tela inicial!'
+  }
+})
+
+const installButtonText = computed(() => {
+  switch (browserInfo.value.installMethod) {
+    case 'ios-share':
+    case 'macos-share':
+      return 'Ver instruções'
+    case 'beforeinstallprompt':
+      return 'Instalar'
+    default:
+      return 'Como instalar'
+  }
+})
+
+const buttonClass = computed(() => {
+  switch (browserInfo.value.installMethod) {
+    case 'ios-share':
+    case 'macos-share':
+      return 'btn-info'
+    case 'beforeinstallprompt':
+      return 'btn-success'
+    default:
+      return 'btn-primary'
+  }
+})
+
+// Utility functions
+const detectBrowser = () => {
+  if (!import.meta.client) return
+
+  const ua = navigator.userAgent
+  const info = {
+    name: 'Unknown',
+    version: 'Unknown',
+    platform: navigator.platform,
+    mobile: /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(ua),
+    supportsBeforeInstallPrompt: false,
+    supportsPWA: false,
+    installMethod: 'manual'
+  }
+
+  // Detection logic (same as plugin)
+  if (ua.includes('Chrome') && !ua.includes('Edg') && !ua.includes('OPR')) {
+    info.name = 'Chrome'
+    info.supportsBeforeInstallPrompt = true
+    info.supportsPWA = true
+    info.installMethod = 'beforeinstallprompt'
+    const match = ua.match(/Chrome\/(\d+)/)
+    if (match) info.version = match[1]
+  } else if (ua.includes('Edg')) {
+    info.name = 'Edge'
+    info.supportsBeforeInstallPrompt = true
+    info.supportsPWA = true
+    info.installMethod = 'beforeinstallprompt'
+    const match = ua.match(/Edg\/(\d+)/)
+    if (match) info.version = match[1]
+  } else if (ua.includes('SamsungBrowser')) {
+    info.name = 'Samsung Internet'
+    info.supportsBeforeInstallPrompt = true
+    info.supportsPWA = true
+    info.installMethod = 'beforeinstallprompt'
+    const match = ua.match(/SamsungBrowser\/(\d+)/)
+    if (match) info.version = match[1]
+  } else if (ua.includes('Safari') && !ua.includes('Chrome')) {
+    info.name = 'Safari'
+    info.supportsBeforeInstallPrompt = false
+    info.supportsPWA = true
+    info.installMethod = info.mobile ? 'ios-share' : 'macos-share'
+    const match = ua.match(/Version\/(\d+)/)
+    if (match) info.version = match[1]
+  } else if (ua.includes('Firefox')) {
+    info.name = 'Firefox'
+    info.supportsBeforeInstallPrompt = false
+    info.supportsPWA = false
+    info.installMethod = 'unsupported'
+    const match = ua.match(/Firefox\/(\d+)/)
+    if (match) info.version = match[1]
+  }
+
+  browserInfo.value = info
+  installMethod = info.installMethod
+}
+
+const checkInstallationStatus = () => {
   if (!import.meta.client) return false
   
-  const ua = navigator.userAgent
+  isInstalled.value = window.matchMedia('(display-mode: standalone)').matches ||
+                     window.navigator.standalone === true ||
+                     document.referrer.includes('android-app://')
   
-  // Chrome/Chromium based browsers
-  if (ua.includes('Chrome') && !ua.includes('Edg') && !ua.includes('OPR')) {
-    browserName.value = 'Chrome'
-    return true
-  }
-  
-  // Edge
-  if (ua.includes('Edg')) {
-    browserName.value = 'Edge'
-    return true
-  }
-  
-  // Safari (supports PWA but not beforeinstallprompt)
-  if (ua.includes('Safari') && !ua.includes('Chrome')) {
-    browserName.value = 'Safari'
-    return true
-  }
-  
-  // Firefox (limited PWA support)
-  if (ua.includes('Firefox')) {
-    browserName.value = 'Firefox'
-    return false
-  }
-  
-  return false
+  return isInstalled.value
 }
 
 const checkDismissalStatus = () => {
@@ -153,7 +300,7 @@ const checkDismissalStatus = () => {
   
   const now = Date.now()
   
-  // Check Chrome/Edge dismissal (7 days)
+  // Check standard dismissal (7 days)
   if (dismissed && dismissedTime) {
     const daysSince = (now - parseInt(dismissedTime)) / (24 * 60 * 60 * 1000)
     if (daysSince < 7) {
@@ -174,32 +321,28 @@ const checkDismissalStatus = () => {
   return false
 }
 
+// Main functions
 onMounted(async () => {
   if (!import.meta.client) return
   
   await nextTick()
   
-  // Check if already in standalone mode
-  isStandalone.value = window.matchMedia('(display-mode: standalone)').matches
-  if (isStandalone.value) {
-    console.log('📱 Already running as PWA')
+  // Detect browser capabilities
+  detectBrowser()
+  
+  // Check if already installed
+  if (checkInstallationStatus()) {
+    console.log('📱 App já está instalado')
     return
   }
   
-  // Check browser support
-  const supportsPWA = checkBrowserSupport()
-  if (!supportsPWA && !isSafari.value) {
-    console.log('❌ Browser does not support PWA installation')
-    return
-  }
-  
-  // Check dismissal status
+  // Check if recently dismissed
   if (checkDismissalStatus()) {
-    console.log('⏰ Installation prompt was recently dismissed')
+    console.log('⏰ Install prompt foi dispensado recentemente')
     return
   }
   
-  // PWA Update Logic
+  // Setup service worker update listener
   try {
     if ('serviceWorker' in navigator) {
       const registration = await navigator.serviceWorker.getRegistration()
@@ -225,52 +368,42 @@ onMounted(async () => {
     console.warn('SW update check failed:', error)
   }
 
-  // Listen for install prompt availability
+  // Listen for install availability
   window.addEventListener('pwa-install-available', (event: any) => {
-    console.log('📱 PWA install available!')
-    deferredPrompt = event.detail.prompt
-    promptAvailable.value = true
+    console.log('📱 PWA install available!', event.detail)
+    installAvailable.value = true
+    promptAvailable.value = !!event.detail.prompt
     
-    // Show install prompt after a delay (only if not dismissed recently)
+    // Show prompt after delay if not dismissed
     if (!checkDismissalStatus()) {
+      const delay = browserInfo.value.installMethod === 'beforeinstallprompt' ? 3000 : 8000
       setTimeout(() => {
         showInstallPrompt.value = true
-      }, 3000) // 3 second delay
+      }, delay)
     }
   })
 
   // Listen for app installed
   window.addEventListener('pwa-installed', () => {
-    console.log('🎉 App installed successfully!')
+    console.log('🎉 App instalado com sucesso!')
     showInstallPrompt.value = false
-    deferredPrompt = null
+    installAvailable.value = false
     promptAvailable.value = false
+    isInstalled.value = true
   })
-
-  // Safari/iOS specific handling
-  if (isSafari.value && !isStandalone.value && !checkDismissalStatus()) {
+  
+  // For browsers without beforeinstallprompt, show manual prompt
+  if (!browserInfo.value.supportsBeforeInstallPrompt && browserInfo.value.supportsPWA) {
     setTimeout(() => {
-      if (!showInstallPrompt.value && !promptAvailable.value) {
-        console.log('🍎 Showing Safari install prompt')
+      if (!installAvailable.value && !checkDismissalStatus()) {
+        installAvailable.value = true
         showInstallPrompt.value = true
       }
-    }, 8000) // Show after 8 seconds for Safari
-  }
-
-  // Manual trigger for testing (development only)
-  if (isDev.value) {
-    // Check every 5 seconds if prompt becomes available
-    const checkInterval = setInterval(() => {
-      if (window.triggerPWAInstall) {
-        promptAvailable.value = !!deferredPrompt
-      }
-    }, 5000)
-    
-    // Clean up interval after 30 seconds
-    setTimeout(() => clearInterval(checkInterval), 30000)
+    }, 10000) // 10 seconds for Safari
   }
 })
 
+// Action handlers
 const updateApp = () => {
   showUpdatePrompt.value = false
   if (updateSW) updateSW()
@@ -281,129 +414,111 @@ const dismissUpdate = () => {
 }
 
 const installApp = async () => {
-  console.log('🚀 Install button clicked')
+  console.log('🚀 Install button clicked, method:', installMethod)
   
-  // Try global function first
   if (import.meta.client && window.triggerPWAInstall) {
     try {
       const result = await window.triggerPWAInstall()
       console.log('Install result:', result)
       
       if (result.outcome === 'accepted') {
-        console.log('✅ User accepted installation')
-        showInstallPrompt.value = false
-        localStorage.removeItem('pwa-install-dismissed')
-        localStorage.removeItem('pwa-install-dismissed-time')
+        handleInstallSuccess()
       } else if (result.outcome === 'dismissed') {
-        console.log('❌ User dismissed installation')
-        handleDismissal()
-      } else if (result.outcome === 'no-prompt') {
-        console.log('⚠️ No prompt available, showing manual instructions')
-        showManualInstructions()
+        handleInstallDismissal()
       }
       
-      return
     } catch (error) {
-      console.error('Global install failed:', error)
-    }
-  }
-  
-  // Fallback to component-level deferredPrompt
-  if (deferredPrompt) {
-    try {
-      console.log('📱 Showing install prompt...')
-      
-      await deferredPrompt.prompt()
-      const choiceResult = await deferredPrompt.userChoice
-      console.log('User choice:', choiceResult)
-      
-      if (choiceResult.outcome === 'accepted') {
-        console.log('✅ User accepted installation')
-        showInstallPrompt.value = false
-        localStorage.removeItem('pwa-install-dismissed')
-      } else {
-        console.log('❌ User dismissed installation')
-        handleDismissal()
-      }
-      
-      deferredPrompt = null
-      promptAvailable.value = false
-      showInstallPrompt.value = false
-      
-    } catch (error) {
-      console.error('Error during installation:', error)
-      showManualInstructions()
+      console.error('Install failed:', error)
+      handleInstallDismissal()
     }
   } else {
-    console.warn('❌ No deferred prompt available')
-    showManualInstructions()
+    handleInstallDismissal()
   }
 }
 
-const handleDismissal = () => {
+const handleInstallSuccess = () => {
+  console.log('✅ Install success')
+  showInstallPrompt.value = false
+  localStorage.removeItem('pwa-install-dismissed')
+  localStorage.removeItem('pwa-install-dismissed-time')
+  localStorage.removeItem('safari-install-dismissed')
+  localStorage.removeItem('safari-install-dismissed-time')
+}
+
+const handleInstallDismissal = () => {
+  console.log('❌ Install dismissed')
   showInstallPrompt.value = false
   wasDismissed.value = true
   
-  if (isSafari.value) {
+  const now = Date.now().toString()
+  if (browserInfo.value.installMethod === 'ios-share' || browserInfo.value.installMethod === 'macos-share') {
     localStorage.setItem('safari-install-dismissed', 'true')
-    localStorage.setItem('safari-install-dismissed-time', Date.now().toString())
+    localStorage.setItem('safari-install-dismissed-time', now)
   } else {
     localStorage.setItem('pwa-install-dismissed', 'true')
-    localStorage.setItem('pwa-install-dismissed-time', Date.now().toString())
+    localStorage.setItem('pwa-install-dismissed-time', now)
   }
-  
-  deferredPrompt = null
-  promptAvailable.value = false
-}
-
-const showManualInstructions = () => {
-  const instructions = isSafari.value 
-    ? `Para adicionar à tela inicial:
-
-🍎 No Mac (Safari):
-1. Clique no botão de compartilhar (⬆️)
-2. Selecione "Adicionar ao Dock"
-
-📱 No iPhone/iPad:
-1. Toque no botão de compartilhar (⬆️)
-2. Role para baixo e toque em "Adicionar à Tela de Início"
-3. Toque em "Adicionar"`
-    : `Para instalar este app:
-
-📱 No celular:
-• Chrome/Edge: Menu → "Adicionar à tela inicial"
-• Safari (iOS): Compartilhar → "Adicionar à Tela de Início"
-
-💻 No computador:
-• Chrome: Ícone de instalação na barra de endereços
-• Edge: Menu → "Apps" → "Instalar este site como app"`
-
-  alert(instructions)
-  handleDismissal()
 }
 
 const dismissInstall = () => {
-  console.log('❌ Install prompt dismissed by user')
-  handleDismissal()
+  handleInstallDismissal()
 }
 
-const showSafariInstructions = () => {
-  showManualInstructions()
-}
-
-// Development helpers
+// Debug helpers
 const forceShowInstall = () => {
   if (!isDev.value) return
   
-  // Clear dismissal flags
+  // Clear all dismissal flags
   localStorage.removeItem('pwa-install-dismissed')
   localStorage.removeItem('pwa-install-dismissed-time')
   localStorage.removeItem('safari-install-dismissed')
   localStorage.removeItem('safari-install-dismissed-time')
   
   wasDismissed.value = false
+  installAvailable.value = true
   showInstallPrompt.value = true
   
   console.log('🔧 Forcing install prompt display')
+}
+
+const checkStatus = () => {
+  if (!isDev.value) return
+  
+  if (import.meta.client && window.checkPWAStatus) {
+    window.checkPWAStatus()
+  }
+  
+  console.log('🔍 Component Status:')
+  console.log('- Install Available:', installAvailable.value)
+  console.log('- Show Install Prompt:', showInstallPrompt.value)
+  console.log('- Is Installed:', isInstalled.value)
+  console.log('- Was Dismissed:', wasDismissed.value)
+  console.log('- Browser Info:', browserInfo.value)
+}
+
+const clearStorage = () => {
+  if (!isDev.value) return
+  
+  // Clear all PWA related storage
+  localStorage.removeItem('pwa-install-dismissed')
+  localStorage.removeItem('pwa-install-dismissed-time')
+  localStorage.removeItem('safari-install-dismissed')
+  localStorage.removeItem('safari-install-dismissed-time')
+  sessionStorage.removeItem('beforeinstallprompt-fired')
+  sessionStorage.removeItem('beforeinstallprompt-time')
+  sessionStorage.removeItem('page-load-time')
+  
+  // Reset component state
+  wasDismissed.value = false
+  installAvailable.value = false
+  showInstallPrompt.value = false
+  promptAvailable.value = false
+  
+  console.log('🗑️ All PWA storage cleared')
+  
+  // Reload page to restart detection
+  setTimeout(() => {
+    window.location.reload()
+  }, 1000)
 }
 </script>
