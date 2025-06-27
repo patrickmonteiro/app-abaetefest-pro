@@ -17,6 +17,7 @@ export default defineNuxtConfig({
   // CSS
   css: ["~/assets/app.css"],
 
+  // TypeScript
   typescript: {
     typeCheck: false,
     strict: false
@@ -184,11 +185,11 @@ export default defineNuxtConfig({
       meta: [
         { name: 'description', content: 'Aplicação Nuxt 3 com DaisyUI e PWA' },
         { name: 'theme-color', content: '#ffffff' },
-        { name: 'mobile-web-mobile-web-app-capable', content: 'yes' },
+        { name: 'apple-mobile-web-app-capable', content: 'yes' },
         { name: 'apple-mobile-web-app-status-bar-style', content: 'default' }
       ],
       link: [
-        { rel: 'apple-touch-icon', href: '/icons/icon-128x128.png' },
+        { rel: 'apple-touch-icon', href: '/icons/icon-152x152.png' },
         { rel: 'mask-icon', href: '/icons/safari-pinned-tab.svg', color: '#ffffff' }
       ]
     }
