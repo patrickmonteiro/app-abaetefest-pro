@@ -1,4 +1,4 @@
-# netlify.toml - Para preset Vercel (compatível com Netlify)
+# netlify.toml - Para Netlify Edge Functions (mais estável)
 [build]
   command = "npm run build"
   publish = ".output/public"
@@ -6,16 +6,13 @@
 [build.environment]
   NODE_VERSION = "18"  
   NPM_VERSION = "10"
+  # Variável para ativar Edge Functions
+  NETLIFY_USE_EDGE = "true"
 
-# Functions (usando .output/server como no painel)
-[functions]
-  directory = ".output/server"
-
-# Redirects para SSR
-[[redirects]]
-  from = "/*"
-  to = "/.netlify/functions/index"
-  status = 200
+# Edge Functions (mais estável que regular functions)
+[[edge_functions]]
+  function = "server"
+  path = "/*"
 
 # Headers para PWA
 [[headers]]

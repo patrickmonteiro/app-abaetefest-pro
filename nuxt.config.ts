@@ -35,9 +35,9 @@ export default defineNuxtConfig({
   // SSR verdadeiro
   ssr: true,
   
-  // Configuração Nitro para Node.js (funciona no Netlify)
+  // Configuração Nitro com preset Vercel (funciona no Netlify)
   nitro: {
-    preset: 'node-server',
+    preset: 'vercel',
     publicAssets: [
       {
         baseURL: '/',
