@@ -3,15 +3,16 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "build": "nuxt generate",
     "dev": "nuxt dev",
-    "build": "nuxt build",
-    "build:ssr": "nuxt build",
-    "build:static": "nuxt generate", 
+    "generate": "nuxt generate",
     "clean": "rm -rf dist .output .nuxt",
+    "build:clean": "npm run clean && npm run generate",
     "preview": "nuxt preview",
     "postinstall": "nuxt prepare",
     "lint": "eslint .",
-    "typecheck": "nuxt typecheck"
+    "typecheck": "nuxt typecheck",
+    "pwa:test": "npm run generate && npx http-server dist -p 3000"
   },
   "dependencies": {
     "@nuxt/eslint": "1.4.1",

@@ -1,4 +1,4 @@
-// nuxt.config.ts - APENAS SSR (gera .output/public)
+// nuxt.config.ts - Modo estático (SEM problemas de function)
 import tailwindcss from "@tailwindcss/vite";
 
 export default defineNuxtConfig({
@@ -32,26 +32,30 @@ export default defineNuxtConfig({
     '@vite-pwa/nuxt'
   ],
 
-  // SSR verdadeiro
-  ssr: true,
+  // Modo estático - SEM SSR, SEM problemas de function
+  ssr: false,
+  target: 'static',
   
-  // Configuração Nitro com preset Vercel (funciona no Netlify)
+  // Nitro limpo - SEM presets problemáticos
   nitro: {
-    preset: 'vercel',
-    publicAssets: [
-      {
-        baseURL: '/',
-        dir: 'public'
-      }
-    ]
+    prerender: {
+      routes: ['/']
+    }
   },
 
-  // Configuração PWA para SSR
+  // Configuração PWA (otimizada para estático)
   pwa: {
     registerType: 'autoUpdate',
     
     workbox: {
-      // SEM navigateFallback para SSR
+      navigateFallback: '/',
+      navigateFallbackDenylist: [
+        /^\/sw\.js$/,
+        /^\/workbox-.*\.js$/,
+        /^\/manifest\.webmanifest$/,
+        /^\/_nuxt\//,
+        /^\/api\//
+      ],
       globPatterns: [
         '**/*.{js,css,html,png,svg,ico,jpg,jpeg,gif,webp,woff,woff2,ttf,eot}'
       ],
