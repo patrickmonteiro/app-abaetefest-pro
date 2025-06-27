@@ -9,6 +9,11 @@ export default defineNuxtConfig({
   // Preset para Netlify
   nitro: {
     preset: 'netlify',
+    output: {
+      dir: '.output',
+      serverDir: '.output/server',
+      publicDir: '.output/public'
+    },
     routeRules: {
       '/**': { headers: { 'cache-control': 's-maxage=60' } },
       '/api/**': { headers: { 'cache-control': 'max-age=300' } }
