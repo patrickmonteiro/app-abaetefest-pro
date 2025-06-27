@@ -1,28 +1,43 @@
-# netlify.toml - Fallback usando dist (que existe)
+# netlify.toml - Configuração correta para Nuxt 3 PWA
 [build]
   command = "npm run build"
-  # Como dist existe, usar como publish directory
-  publish = "dist"
+  # Nuxt 3 gera output em .output/public
+  publish = ".output/public"
   
 [build.environment]
   NODE_VERSION = "18"  
   NPM_VERSION = "10"
-  # Forçar preset Netlify
+  # Preset correto para Netlify
   NITRO_PRESET = "netlify"
 
-# Para site estático, sem redirects para functions
-# [[redirects]]
-#   from = "/*"
-#   to = "/index.html"
-#   status = 200
+# Headers específicos para PWA
+[[headers]]
+  for = "/manifest.webmanifest"
+  [headers.values]
+    Content-Type = "application/manifest+json"
+    Cache-Control = "public, max-age=0, must-revalidate"
 
 [[headers]]
   for = "/sw.js"
   [headers.values]
+    Content-Type = "application/javascript"
     Cache-Control = "public, max-age=0, must-revalidate"
+    Service-Worker-Allowed = "/"
 
 [[headers]]
+  for = "/workbox-*.js"
+  [headers.values]
+    Content-Type = "application/javascript"
+    Cache-Control = "public, max-age=0, must-revalidate"
+
+# Cache para assets estáticos
+[[headers]]
   for = "/_nuxt/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+[[headers]]
+  for = "/icons/*"
   [headers.values]
     Cache-Control = "public, max-age=31536000, immutable"
 
@@ -40,3 +55,10 @@
   for = "/*.svg"
   [headers.values]
     Cache-Control = "public, max-age=31536000, immutable"
+
+# Redirects para SPA (se necessário)
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+  conditions = {Role = ["admin"], Country = ["!"]}
