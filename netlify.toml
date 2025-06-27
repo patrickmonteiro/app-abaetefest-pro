@@ -1,4 +1,4 @@
-# netlify.toml - Para preset netlify corrigido
+# netlify.toml - Configuração corrigida (sem duplicatas)
 [build]
   command = "npm run build"
   publish = ".output/public"
@@ -11,13 +11,13 @@
 [functions]
   directory = ".output/server"
 
-# Redirects para SSR
+# Redirects para SSR (CORRIGIDO - sem barra final)
 [[redirects]]
   from = "/*"
-  to = "/.netlify/functions/server"
+  to = "/.netlify/functions/index"
   status = 200
 
-# Headers para PWA
+# Headers para PWA (SEM DUPLICATAS)
 [[headers]]
   for = "/manifest.webmanifest"
   [headers.values]
@@ -45,6 +45,15 @@
   for = "/icons/*"
   [headers.values]
     Cache-Control = "public, max-age=31536000, immutable"
+
+# Headers de segurança
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "DENY"
+    X-XSS-Protection = "1; mode=block"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
 
 # Headers para PWA
 [[headers]]
