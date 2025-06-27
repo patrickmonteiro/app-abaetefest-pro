@@ -406,3 +406,4 @@ const forceShowInstall = () => {
   
   console.log('🔧 Forcing install prompt display')
 }
+</script>
