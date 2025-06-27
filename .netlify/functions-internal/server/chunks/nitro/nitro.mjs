@@ -3976,7 +3976,7 @@ function _expandFromEnv(value) {
 const _inlineRuntimeConfig = {
   "app": {
     "baseURL": "/",
-    "buildId": "6ec84d7d-10c4-4e31-bc01-ca9d12448849",
+    "buildId": "ef339fc2-68ec-45e3-9b9e-25b63e2aae0d",
     "buildAssetsDir": "/_nuxt/",
     "cdnURL": ""
   },
@@ -3996,6 +3996,9 @@ const _inlineRuntimeConfig = {
         "headers": {
           "cache-control": "max-age=300"
         }
+      },
+      "/": {
+        "prerender": false
       },
       "/_nuxt/builds/meta/**": {
         "headers": {
