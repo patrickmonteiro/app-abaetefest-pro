@@ -12,7 +12,12 @@
     "postinstall": "nuxt prepare",
     "lint": "eslint .",
     "typecheck": "nuxt typecheck",
-    "pwa:test": "npm run generate && npx http-server dist -p 3000"
+    "pwa:test": "npm run generate && npx http-server dist -p 3000",
+    "pwa:icons": "node scripts/generate-pwa-icons.js",
+    "pwa:validate": "npm run generate && npx web-app-manifest-cli validate dist/manifest.webmanifest",
+    "pwa:audit": "npm run generate && npx lighthouse dist/index.html --output html --output-path ./lighthouse-report.html --only-categories=pwa",
+    "serve:dist": "npx http-server dist -p 3000 -o",
+    "setup:icons": "mkdir -p scripts && npm run pwa:icons"
   },
   "dependencies": {
     "@nuxt/eslint": "1.4.1",
@@ -29,6 +34,11 @@
     "vue-router": "^4.5.1"
   },
   "devDependencies": {
-    "vue-tsc": "^2.2.10"
+    "vue-tsc": "^2.2.10",
+    "http-server": "^14.1.1",
+    "lighthouse": "^11.4.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
   }
 }
