@@ -1,7 +1,7 @@
 # netlify.toml - Para Netlify Edge Functions (mais estável)
 [build]
   command = "npm run build"
-  publish = ".output/public"
+  publish = ".vercel/output/static"
   
 [build.environment]
   NODE_VERSION = "18"  
