@@ -50,37 +50,70 @@ let deferredPrompt = null
 let updateSW = null
 
 onMounted(async () => {
+  await nextTick()
+  
   // PWA Update Logic
   if ('serviceWorker' in navigator) {
-    const { Workbox } = await import('workbox-window')
-    const wb = new Workbox('/sw.js')
-    
-    wb.addEventListener('waiting', () => {
-      showUpdatePrompt.value = true
-      updateSW = () => {
-        wb.addEventListener('controlling', () => {
-          window.location.reload()
-        })
-        wb.messageSkipWaiting()
-      }
-    })
-    
-    wb.register()
+    try {
+      const { Workbox } = await import('workbox-window')
+      const wb = new Workbox('/sw.js')
+      
+      wb.addEventListener('waiting', () => {
+        showUpdatePrompt.value = true
+        updateSW = () => {
+          wb.addEventListener('controlling', () => {
+            window.location.reload()
+          })
+          wb.messageSkipWaiting()
+        }
+      })
+      
+      wb.register()
+    } catch (e) {
+      console.error('Workbox registration failed:', e)
+    }
   }
 
-  // Install Prompt Logic
+  // Install Prompt Logic with debugging
   window.addEventListener('beforeinstallprompt', (e) => {
+    console.log('📱 Install prompt triggered!')
     e.preventDefault()
     deferredPrompt = e
-    showInstallPrompt.value = true
+    
+    // Check if user previously dismissed
+    const dismissed = localStorage.getItem('pwa-install-dismissed')
+    if (dismissed !== 'true') {
+      showInstallPrompt.value = true
+    }
   })
 
   // Hide install prompt if already installed
   window.addEventListener('appinstalled', () => {
+    console.log('🎉 App installed successfully!')
     showInstallPrompt.value = false
     deferredPrompt = null
+    localStorage.removeItem('pwa-install-dismissed')
   })
+
+  // Additional check for iOS
+  if (isIOS() && !isInStandaloneMode()) {
+    // For iOS, show custom install instructions after a delay
+    setTimeout(() => {
+      if (!localStorage.getItem('ios-install-dismissed')) {
+        showInstallPrompt.value = true
+      }
+    }, 3000)
+  }
 })
+
+// Helper functions
+const isIOS = () => {
+  return /iPad|iPhone|iPod/.test(navigator.userAgent)
+}
+
+const isInStandaloneMode = () => {
+  return window.matchMedia('(display-mode: standalone)').matches
+}
 
 const updateApp = () => {
   showUpdatePrompt.value = false
