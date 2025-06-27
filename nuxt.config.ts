@@ -184,7 +184,7 @@ export default defineNuxtConfig({
       meta: [
         { name: 'description', content: 'Aplicação Nuxt 3 com DaisyUI e PWA' },
         { name: 'theme-color', content: '#ffffff' },
-        { name: 'apple-mobile-web-app-capable', content: 'yes' },
+        { name: 'web-mobile-web-app-capable', content: 'yes' },
         { name: 'apple-mobile-web-app-status-bar-style', content: 'default' }
       ],
       link: [
