@@ -1,4 +1,4 @@
-// nuxt.config.ts - Configuração minimalista para Netlify SSR
+// nuxt.config.ts - APENAS SSR (gera .output/public)
 import tailwindcss from "@tailwindcss/vite";
 
 export default defineNuxtConfig({
@@ -6,6 +6,7 @@ export default defineNuxtConfig({
   
   devtools: { enabled: true },
   
+  // Configuração Vite
   vite: {
     plugins: [tailwindcss()],
     css: {
@@ -13,13 +14,16 @@ export default defineNuxtConfig({
     }
   },
 
+  // CSS
   css: ["~/assets/app.css"],
 
+  // TypeScript
   typescript: {
     typeCheck: false,
     strict: false
   },
 
+  // Módulos essenciais + PWA
   modules: [
     '@nuxt/fonts',
     '@nuxt/icon',
@@ -28,32 +32,68 @@ export default defineNuxtConfig({
     '@vite-pwa/nuxt'
   ],
 
+  // SSR verdadeiro
   ssr: true,
   
-  // Configuração mínima e estável
+  // Configuração Nitro com preset Vercel (funciona no Netlify)
   nitro: {
-    preset: 'netlify',
-    // Apenas o essencial
+    preset: 'vercel',
     publicAssets: [
       {
         baseURL: '/',
         dir: 'public'
       }
     ]
-    // SEM configurações de rollup que podem causar problemas
   },
 
-  // PWA configuração conservadora
+  // Configuração PWA para SSR
   pwa: {
     registerType: 'autoUpdate',
     
     workbox: {
+      // SEM navigateFallback para SSR
       globPatterns: [
         '**/*.{js,css,html,png,svg,ico,jpg,jpeg,gif,webp,woff,woff2,ttf,eot}'
       ],
       cleanupOutdatedCaches: true,
       skipWaiting: true,
-      clientsClaim: true
+      clientsClaim: true,
+      
+      runtimeCaching: [
+        {
+          urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
+          handler: 'CacheFirst',
+          options: {
+            cacheName: 'google-fonts-cache',
+            expiration: {
+              maxEntries: 10,
+              maxAgeSeconds: 60 * 60 * 24 * 365
+            }
+          }
+        },
+        {
+          urlPattern: /\.(?:png|jpg|jpeg|svg|gif|webp)$/,
+          handler: 'CacheFirst',
+          options: {
+            cacheName: 'images-cache',
+            expiration: {
+              maxEntries: 60,
+              maxAgeSeconds: 60 * 60 * 24 * 30
+            }
+          }
+        },
+        {
+          urlPattern: /\/_nuxt\/.*/,
+          handler: 'CacheFirst',
+          options: {
+            cacheName: 'nuxt-assets-cache',
+            expiration: {
+              maxEntries: 100,
+              maxAgeSeconds: 60 * 60 * 24 * 365
+            }
+          }
+        }
+      ]
     },
     
     client: {

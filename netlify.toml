@@ -1,7 +1,7 @@
 # netlify.toml - Configuração corrigida (sem duplicatas)
 [build]
   command = "npm run build"
-  publish = ".output/public"
+  publish = ".vercel/output/static"
   
 [build.environment]
   NODE_VERSION = "18"  
@@ -9,12 +9,12 @@
 
 # Functions directory (padrão do Netlify)
 [functions]
-  directory = ".output/server"
+  directory = ".vercel/output/functions"
 
 # Redirects para SSR (CORRIGIDO - sem barra final)
 [[redirects]]
   from = "/*"
-  to = "/.netlify/functions/index"
+  to = "/.vercel/output/functions"
   status = 200
 
 # Headers para PWA (SEM DUPLICATAS)
