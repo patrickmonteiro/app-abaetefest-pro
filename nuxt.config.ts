@@ -1,4 +1,4 @@
-// nuxt.config.ts - APENAS SSR (gera .output/public)
+// nuxt.config.ts - Configuração manual para Netlify (sem presets)
 import tailwindcss from "@tailwindcss/vite";
 
 export default defineNuxtConfig({
@@ -6,7 +6,6 @@ export default defineNuxtConfig({
   
   devtools: { enabled: true },
   
-  // Configuração Vite
   vite: {
     plugins: [tailwindcss()],
     css: {
@@ -14,16 +13,13 @@ export default defineNuxtConfig({
     }
   },
 
-  // CSS
   css: ["~/assets/app.css"],
 
-  // TypeScript
   typescript: {
     typeCheck: false,
     strict: false
   },
 
-  // Módulos essenciais + PWA
   modules: [
     '@nuxt/fonts',
     '@nuxt/icon',
@@ -32,26 +28,36 @@ export default defineNuxtConfig({
     '@vite-pwa/nuxt'
   ],
 
-  // SSR verdadeiro
   ssr: true,
   
-  // Configuração Nitro com preset Vercel (funciona no Netlify)
+  // SEM preset - configuração manual
   nitro: {
-    preset: 'vercel',
+    // Não usar preset problemático
+    output: {
+      dir: '.output',
+      serverDir: '.output/server',
+      publicDir: '.output/public'
+    },
     publicAssets: [
       {
         baseURL: '/',
         dir: 'public'
       }
-    ]
+    ],
+    // Configuração compatível com Netlify Functions
+    rollupConfig: {
+      output: {
+        format: 'cjs', // CommonJS para Netlify Functions
+        entryFileNames: 'index.js'
+      }
+    }
   },
 
-  // Configuração PWA para SSR
+  // PWA configuração para SSR
   pwa: {
     registerType: 'autoUpdate',
     
     workbox: {
-      // SEM navigateFallback para SSR
       globPatterns: [
         '**/*.{js,css,html,png,svg,ico,jpg,jpeg,gif,webp,woff,woff2,ttf,eot}'
       ],
@@ -79,17 +85,6 @@ export default defineNuxtConfig({
             expiration: {
               maxEntries: 60,
               maxAgeSeconds: 60 * 60 * 24 * 30
-            }
-          }
-        },
-        {
-          urlPattern: /\/_nuxt\/.*/,
-          handler: 'CacheFirst',
-          options: {
-            cacheName: 'nuxt-assets-cache',
-            expiration: {
-              maxEntries: 100,
-              maxAgeSeconds: 60 * 60 * 24 * 365
             }
           }
         }
