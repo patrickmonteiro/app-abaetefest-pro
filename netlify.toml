@@ -1,16 +1,14 @@
-# netlify.toml - Configuração correta para Nuxt 3 PWA
+# netlify.toml - Configuração para Nuxt 3 PWA (usando dist)
 [build]
   command = "npm run build"
-  # Nuxt 3 gera output em .output/public
-  publish = ".output/public"
+  # Agora o Nuxt está gerando em dist/
+  publish = "dist"
   
 [build.environment]
   NODE_VERSION = "18"  
   NPM_VERSION = "10"
-  # Preset correto para Netlify
-  NITRO_PRESET = "netlify"
 
-# Headers específicos para PWA
+# Headers para PWA
 [[headers]]
   for = "/manifest.webmanifest"
   [headers.values]
@@ -22,7 +20,6 @@
   [headers.values]
     Content-Type = "application/javascript"
     Cache-Control = "public, max-age=0, must-revalidate"
-    Service-Worker-Allowed = "/"
 
 [[headers]]
   for = "/workbox-*.js"
@@ -30,7 +27,6 @@
     Content-Type = "application/javascript"
     Cache-Control = "public, max-age=0, must-revalidate"
 
-# Cache para assets estáticos
 [[headers]]
   for = "/_nuxt/*"
   [headers.values]
@@ -41,24 +37,39 @@
   [headers.values]
     Cache-Control = "public, max-age=31536000, immutable"
 
-[[headers]]
-  for = "/*.png"
-  [headers.values]
-    Cache-Control = "public, max-age=31536000, immutable"
-
-[[headers]]
-  for = "/*.jpg"
-  [headers.values]
-    Cache-Control = "public, max-age=31536000, immutable"
-
-[[headers]]
-  for = "/*.svg"
-  [headers.values]
-    Cache-Control = "public, max-age=31536000, immutable"
-
-# Redirects para SPA (se necessário)
+# Redirect para SPA (importante para PWA)
 [[redirects]]
   from = "/*"
   to = "/index.html"
-  status = 200
-  conditions = {Role = ["admin"], Country = ["!"]}
+  status = 200ão para Nuxt 3 PWA
+[build]
+  command = "npm run build"
+  # Nuxt 3 gera em .output/public
+  publish = ".output/public"
+  
+[build.environment]
+  NODE_VERSION = "18"  
+  NPM_VERSION = "10"
+
+# Headers para PWA
+[[headers]]
+  for = "/manifest.webmanifest"
+  [headers.values]
+    Content-Type = "application/manifest+json"
+    Cache-Control = "public, max-age=0, must-revalidate"
+
+[[headers]]
+  for = "/sw.js"
+  [headers.values]
+    Content-Type = "application/javascript"
+    Cache-Control = "public, max-age=0, must-revalidate"
+
+[[headers]]
+  for = "/_nuxt/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+[[headers]]
+  for = "/icons/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
