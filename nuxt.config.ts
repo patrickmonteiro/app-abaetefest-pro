@@ -188,7 +188,7 @@ export default defineNuxtConfig({
         { name: 'apple-mobile-web-app-status-bar-style', content: 'default' }
       ],
       link: [
-        { rel: 'apple-touch-icon', href: '/icons/icon-152x152.png' },
+        { rel: 'apple-touch-icon', href: '/icons/icon-128x128.png' },
         { rel: 'mask-icon', href: '/icons/safari-pinned-tab.svg', color: '#ffffff' }
       ]
     }

@@ -1,215 +1,279 @@
 <template>
-  <div class="min-h-screen bg-base-100">
-    <div class="container mx-auto px-4 py-8">
-      <!-- Header -->
-      <div class="text-center mb-8">
-        <h1 class="text-4xl font-bold text-primary mb-4">
-          AbaetefestPro
-        </h1>
-        <p class="text-lg text-base-content/70">
-          Aplicação PWA com Nuxt 3 + DaisyUI
-        </p>
-      </div>
+  <div class="card bg-error text-error-content shadow-lg mb-4">
+    <div class="card-body">
+      <h2 class="card-title">🔍 PWA Deep Debug</h2>
+      
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+        <!-- Basic Checks -->
+        <div class="bg-base-100 text-base-content p-4 rounded">
+          <h3 class="font-bold mb-2">✅ Critérios Básicos:</h3>
+          <ul class="space-y-1">
+            <li :class="basicChecks.https ? 'text-success' : 'text-error'">
+              {{ basicChecks.https ? '✅' : '❌' }} HTTPS/Localhost
+            </li>
+            <li :class="basicChecks.notInstalled ? 'text-success' : 'text-error'">
+              {{ basicChecks.notInstalled ? '✅' : '❌' }} Não instalado
+            </li>
+            <li :class="basicChecks.serviceWorker ? 'text-success' : 'text-error'">
+              {{ basicChecks.serviceWorker ? '✅' : '❌' }} Service Worker
+            </li>
+            <li :class="basicChecks.manifest ? 'text-success' : 'text-error'">
+              {{ basicChecks.manifest ? '✅' : '❌' }} Manifest válido
+            </li>
+          </ul>
+        </div>
 
-      <!-- PWA Debug (remover em produção) -->
-      <PWADebug />
+        <!-- Browser Info -->
+        <div class="bg-base-100 text-base-content p-4 rounded">
+          <h3 class="font-bold mb-2">🌐 Navegador:</h3>
+          <ul class="space-y-1">
+            <li><strong>Browser:</strong> {{ browserInfo.name }}</li>
+            <li><strong>Version:</strong> {{ browserInfo.version }}</li>
+            <li><strong>Platform:</strong> {{ browserInfo.platform }}</li>
+            <li><strong>Supports PWA:</strong> {{ browserInfo.supportsPWA ? 'Sim' : 'Não' }}</li>
+          </ul>
+        </div>
 
-      <!-- PWA Status Cards -->
-      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-        <div class="card bg-base-200 shadow-lg">
-          <div class="card-body">
-            <h2 class="card-title">
-              <Icon name="heroicons:device-phone-mobile" class="h-6 w-6" />
-              PWA Status
-            </h2>
-            <p class="text-sm">{{ pwaStatus }}</p>
-            <div class="card-actions justify-end">
-              <div class="badge badge-primary">{{ isOnline ? 'Online' : 'Offline' }}</div>
-            </div>
+        <!-- Manifest Details -->
+        <div class="bg-base-100 text-base-content p-4 rounded">
+          <h3 class="font-bold mb-2">📄 Manifest:</h3>
+          <div v-if="manifestInfo.loaded">
+            <ul class="space-y-1">
+              <li><strong>Name:</strong> {{ manifestInfo.data?.name || 'N/A' }}</li>
+              <li><strong>Start URL:</strong> {{ manifestInfo.data?.start_url || 'N/A' }}</li>
+              <li><strong>Display:</strong> {{ manifestInfo.data?.display || 'N/A' }}</li>
+              <li><strong>Icons:</strong> {{ manifestInfo.data?.icons?.length || 0 }}</li>
+            </ul>
+          </div>
+          <div v-else class="text-error">
+            ❌ Manifest não carregado
           </div>
         </div>
 
-        <div class="card bg-base-200 shadow-lg">
-          <div class="card-body">
-            <h2 class="card-title">
-              <Icon name="heroicons:wifi" class="h-6 w-6" />
-              Conexão
-            </h2>
-            <p class="text-sm">{{ networkStatus }}</p>
-            <div class="card-actions justify-end">
-              <div :class="connectionClass">{{ connectionType }}</div>
-            </div>
-          </div>
-        </div>
-
-        <div class="card bg-base-200 shadow-lg">
-          <div class="card-body">
-            <h2 class="card-title">
-              <Icon name="heroicons:cog-6-tooth" class="h-6 w-6" />
-              Service Worker
-            </h2>
-            <p class="text-sm">{{ swStatus }}</p>
-            <div class="card-actions justify-end">
-              <div :class="swClass">{{ swState }}</div>
-            </div>
-          </div>
+        <!-- Install Criteria -->
+        <div class="bg-base-100 text-base-content p-4 rounded">
+          <h3 class="font-bold mb-2">🎯 Critérios de Instalação:</h3>
+          <ul class="space-y-1">
+            <li :class="installCriteria.hasMinimumIcons ? 'text-success' : 'text-error'">
+              {{ installCriteria.hasMinimumIcons ? '✅' : '❌' }} Ícones 192x192 + 512x512
+            </li>
+            <li :class="installCriteria.hasValidStartUrl ? 'text-success' : 'text-error'">
+              {{ installCriteria.hasValidStartUrl ? '✅' : '❌' }} Start URL válida
+            </li>
+            <li :class="installCriteria.hasValidDisplay ? 'text-success' : 'text-error'">
+              {{ installCriteria.hasValidDisplay ? '✅' : '❌' }} Display standalone
+            </li>
+            <li :class="installCriteria.hasValidName ? 'text-success' : 'text-error'">
+              {{ installCriteria.hasValidName ? '✅' : '❌' }} Nome válido
+            </li>
+          </ul>
         </div>
       </div>
 
       <!-- Actions -->
-      <div class="text-center">
-        <button 
-          class="btn btn-primary btn-lg mr-4" 
-          @click="checkForUpdates"
-          :disabled="loading"
-        >
-          <Icon v-if="loading" name="heroicons:arrow-path" class="h-5 w-5 animate-spin" />
-          <Icon v-else name="heroicons:arrow-path" class="h-5 w-5" />
-          Verificar Atualizações
+      <div class="card-actions justify-end mt-4">
+        <button class="btn btn-sm btn-primary" @click="checkAll">
+          🔄 Verificar Tudo
         </button>
-        
-        <button class="btn btn-outline btn-lg mr-4" @click="showPWAInfo">
-          <Icon name="heroicons:information-circle" class="h-5 w-5" />
-          Info PWA
+        <button class="btn btn-sm btn-secondary" @click="downloadManifest">
+          📥 Baixar Manifest
         </button>
+        <button class="btn btn-sm btn-accent" @click="forceRefresh">
+          🔄 Recarregar
+        </button>
+      </div>
 
-        <button class="btn btn-secondary btn-lg" @click="debugInstall">
-          <Icon name="heroicons:wrench-screwdriver" class="h-5 w-5" />
-          Debug Install
-        </button>
+      <!-- Detailed Logs -->
+      <div v-if="detailedLogs.length > 0" class="mt-4">
+        <h4 class="font-bold mb-2">📝 Logs Detalhados:</h4>
+        <div class="bg-base-300 p-4 rounded max-h-40 overflow-y-auto">
+          <pre class="text-xs">{{ detailedLogs.join('\n') }}</pre>
+        </div>
       </div>
     </div>
   </div>
 </template>
 
-<script setup lang="ts">
+<script setup>
 import { ref, onMounted, computed } from 'vue'
 
-const isOnline = ref(true)
-const loading = ref(false)
-const serviceWorkerRegistration = ref(null)
-
-const pwaStatus = computed(() => {
-  if (import.meta.client) {
-    return window.matchMedia('(display-mode: standalone)').matches 
-      ? 'Instalado como PWA' 
-      : 'Executando no navegador'
-  }
-  return 'Verificando...'
+const basicChecks = ref({
+  https: false,
+  notInstalled: false,
+  serviceWorker: false,
+  manifest: false
 })
 
-const networkStatus = computed(() => {
-  if (!import.meta.client) return 'Verificando...'
-  return isOnline.value ? 'Conectado à internet' : 'Modo offline'
+const manifestInfo = ref({
+  loaded: false,
+  data: null,
+  error: null
 })
 
-const connectionType = computed(() => {
-  if (!import.meta.client) return 'Unknown'
-  const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection
-  return connection ? connection.effectiveType || 'Unknown' : 'Unknown'
+const browserInfo = ref({
+  name: 'Unknown',
+  version: 'Unknown',
+  platform: 'Unknown',
+  supportsPWA: false
 })
 
-const connectionClass = computed(() => {
-  const type = connectionType.value
+const detailedLogs = ref([])
+
+const installCriteria = computed(() => {
+  const manifest = manifestInfo.value.data
   return {
-    'badge badge-success': type === '4g',
-    'badge badge-warning': type === '3g',
-    'badge badge-error': type === '2g' || type === 'slow-2g',
-    'badge badge-ghost': type === 'Unknown'
+    hasMinimumIcons: manifest?.icons?.some(icon => 
+      icon.sizes === '192x192' || icon.sizes === '512x512'
+    ) || false,
+    hasValidStartUrl: !!manifest?.start_url,
+    hasValidDisplay: manifest?.display === 'standalone',
+    hasValidName: !!(manifest?.name || manifest?.short_name)
   }
 })
 
-const swStatus = computed(() => {
-  if (!serviceWorkerRegistration.value) return 'Não instalado'
-  return 'Ativo e funcionando'
-})
-
-const swState = computed(() => {
-  return serviceWorkerRegistration.value ? 'Ativo' : 'Inativo'
-})
-
-const swClass = computed(() => {
-  return serviceWorkerRegistration.value 
-    ? 'badge badge-success' 
-    : 'badge badge-error'
-})
+const log = (message) => {
+  console.log(message)
+  detailedLogs.value.push(`${new Date().toLocaleTimeString()}: ${message}`)
+}
 
 onMounted(() => {
-  // Monitor online/offline status
   if (import.meta.client) {
-    isOnline.value = navigator.onLine
-    
-    window.addEventListener('online', () => {
-      isOnline.value = true
-    })
-    
-    window.addEventListener('offline', () => {
-      isOnline.value = false
-    })
-
-    // Check for service worker
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.ready.then((registration) => {
-        serviceWorkerRegistration.value = registration
-      })
-    }
+    checkAll()
+    detectBrowser()
   }
 })
 
-const checkForUpdates = async () => {
-  loading.value = true
+const checkAll = async () => {
+  log('🔍 Iniciando verificação completa...')
   
-  try {
-    if ('serviceWorker' in navigator) {
-      const registration = await navigator.serviceWorker.ready
-      await registration.update()
+  // Check HTTPS
+  basicChecks.value.https = location.protocol === 'https:' || location.hostname === 'localhost'
+  log(`HTTPS: ${basicChecks.value.https}`)
+
+  // Check if installed
+  basicChecks.value.notInstalled = !window.matchMedia('(display-mode: standalone)').matches
+  log(`Not installed: ${basicChecks.value.notInstalled}`)
+
+  // Check Service Worker
+  await checkServiceWorker()
+
+  // Check Manifest
+  await checkManifest()
+
+  log('✅ Verificação completa finalizada')
+}
+
+const checkServiceWorker = async () => {
+  if ('serviceWorker' in navigator) {
+    try {
+      const registration = await navigator.serviceWorker.getRegistration()
+      basicChecks.value.serviceWorker = !!registration
+      log(`Service Worker: ${!!registration ? 'Registrado' : 'Não registrado'}`)
       
-      // Show success message
-      // You can add a toast notification here
-      console.log('Verificação de atualização concluída')
+      if (registration) {
+        log(`SW State: ${registration.active?.state || 'Unknown'}`)
+        log(`SW Scope: ${registration.scope}`)
+      }
+    } catch (error) {
+      log(`Erro verificando SW: ${error.message}`)
+      basicChecks.value.serviceWorker = false
+    }
+  } else {
+    log('Service Worker não suportado')
+    basicChecks.value.serviceWorker = false
+  }
+}
+
+const checkManifest = async () => {
+  try {
+    log('📄 Carregando manifest...')
+    const response = await fetch('/manifest.webmanifest')
+    
+    if (response.ok) {
+      const data = await response.json()
+      manifestInfo.value = {
+        loaded: true,
+        data,
+        error: null
+      }
+      basicChecks.value.manifest = true
+      log('✅ Manifest carregado com sucesso')
+      log(`Manifest icons: ${data.icons?.length || 0}`)
+      log(`Manifest display: ${data.display}`)
+      log(`Manifest start_url: ${data.start_url}`)
+    } else {
+      throw new Error(`HTTP ${response.status}`)
     }
   } catch (error) {
-    console.error('Erro ao verificar atualizações:', error)
-  } finally {
-    loading.value = false
+    log(`❌ Erro carregando manifest: ${error.message}`)
+    manifestInfo.value = {
+      loaded: false,
+      data: null,
+      error: error.message
+    }
+    basicChecks.value.manifest = false
   }
 }
 
-const showPWAInfo = () => {
-  // You can add a modal with PWA information here
-  alert(`
-PWA Info:
-- Status: ${pwaStatus.value}
-- Online: ${isOnline.value ? 'Sim' : 'Não'}
-- Service Worker: ${swState.value}
-- Conexão: ${connectionType.value}
-  `)
+const detectBrowser = () => {
+  const ua = navigator.userAgent
+  let name = 'Unknown'
+  let version = 'Unknown'
+  let supportsPWA = false
+
+  if (ua.includes('Chrome')) {
+    name = 'Chrome'
+    supportsPWA = true
+    const match = ua.match(/Chrome\/(\d+)/)
+    if (match) version = match[1]
+  } else if (ua.includes('Firefox')) {
+    name = 'Firefox'
+    supportsPWA = false
+    const match = ua.match(/Firefox\/(\d+)/)
+    if (match) version = match[1]
+  } else if (ua.includes('Safari') && !ua.includes('Chrome')) {
+    name = 'Safari'
+    supportsPWA = false // Safari tem suporte limitado
+    const match = ua.match(/Version\/(\d+)/)
+    if (match) version = match[1]
+  } else if (ua.includes('Edge')) {
+    name = 'Edge'
+    supportsPWA = true
+    const match = ua.match(/Edg\/(\d+)/)
+    if (match) version = match[1]
+  }
+
+  browserInfo.value = {
+    name,
+    version,
+    platform: navigator.platform,
+    supportsPWA
+  }
+
+  log(`Browser: ${name} ${version} (PWA: ${supportsPWA})`)
 }
 
-const debugInstall = () => {
-  if (import.meta.client && (window as any).checkPWAStatus) {
-    (window as any).checkPWAStatus()
-  }
-  
-  if (import.meta.client && (window as any).triggerPWAInstall) {
-    console.log('🧪 Testing manual install trigger...')
-    ;(window as any).triggerPWAInstall().then((result: any) => {
-      console.log('Manual install result:', result)
-      alert(`Install result: ${JSON.stringify(result, null, 2)}`)
-    })
-  } else {
-    alert('PWA install functions not available')
+const downloadManifest = async () => {
+  try {
+    const response = await fetch('/manifest.webmanifest')
+    const text = await response.text()
+    
+    const blob = new Blob([text], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
+    
+    const a = document.createElement('a')
+    a.href = url
+    a.download = 'manifest.webmanifest'
+    a.click()
+    
+    URL.revokeObjectURL(url)
+    log('📥 Manifest baixado')
+  } catch (error) {
+    log(`❌ Erro baixando manifest: ${error.message}`)
   }
 }
 
-// SEO
-useHead({
-  title: 'AbaetefestPro - PWA with Nuxt 3',
-  meta: [
-    { name: 'description', content: 'Progressive Web App desenvolvida com Nuxt 3 e DaisyUI' },
-    { property: 'og:title', content: 'AbaetefestPro PWA' },
-    { property: 'og:description', content: 'Progressive Web App desenvolvida com Nuxt 3 e DaisyUI' },
-    { property: 'og:type', content: 'website' }
-  ]
-})
+const forceRefresh = () => {
+  window.location.reload()
+}
 </script>

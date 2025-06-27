@@ -14,6 +14,9 @@
       <!-- PWA Debug (remover em produção) -->
       <PWADebug />
 
+      <!-- PWA Deep Debug -->
+      <PWADeepDebug />
+
       <!-- PWA Status Cards -->
       <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
         <div class="card bg-base-200 shadow-lg">
@@ -193,7 +196,7 @@ const debugInstall = () => {
   
   if (import.meta.client && window.triggerPWAInstall) {
     console.log('🧪 Testing manual install trigger...')
-    window.triggerPWAInstall().then(result => {
+    window.triggerPWAInstall().then((result: any) => {
       console.log('Manual install result:', result)
       alert(`Install result: ${JSON.stringify(result, null, 2)}`)
     })
