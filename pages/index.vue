@@ -68,9 +68,14 @@
           Verificar Atualizações
         </button>
         
-        <button class="btn btn-outline btn-lg" @click="showPWAInfo">
+        <button class="btn btn-outline btn-lg mr-4" @click="showPWAInfo">
           <Icon name="heroicons:information-circle" class="h-5 w-5" />
           Info PWA
+        </button>
+
+        <button class="btn btn-secondary btn-lg" @click="debugInstall">
+          <Icon name="heroicons:wrench-screwdriver" class="h-5 w-5" />
+          Debug Install
         </button>
       </div>
     </div>
@@ -85,7 +90,7 @@ const loading = ref(false)
 const serviceWorkerRegistration = ref(null)
 
 const pwaStatus = computed(() => {
-  if (process.client) {
+  if (import.meta.client) {
     return window.matchMedia('(display-mode: standalone)').matches 
       ? 'Instalado como PWA' 
       : 'Executando no navegador'
@@ -94,12 +99,12 @@ const pwaStatus = computed(() => {
 })
 
 const networkStatus = computed(() => {
-  if (!process.client) return 'Verificando...'
+  if (!import.meta.client) return 'Verificando...'
   return isOnline.value ? 'Conectado à internet' : 'Modo offline'
 })
 
 const connectionType = computed(() => {
-  if (!process.client) return 'Unknown'
+  if (!import.meta.client) return 'Unknown'
   const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection
   return connection ? connection.effectiveType || 'Unknown' : 'Unknown'
 })
@@ -131,7 +136,7 @@ const swClass = computed(() => {
 
 onMounted(() => {
   // Monitor online/offline status
-  if (process.client) {
+  if (import.meta.client) {
     isOnline.value = navigator.onLine
     
     window.addEventListener('online', () => {
@@ -179,6 +184,22 @@ PWA Info:
 - Service Worker: ${swState.value}
 - Conexão: ${connectionType.value}
   `)
+}
+
+const debugInstall = () => {
+  if (import.meta.client && window.checkPWAStatus) {
+    window.checkPWAStatus()
+  }
+  
+  if (import.meta.client && window.triggerPWAInstall) {
+    console.log('🧪 Testing manual install trigger...')
+    window.triggerPWAInstall().then(result => {
+      console.log('Manual install result:', result)
+      alert(`Install result: ${JSON.stringify(result, null, 2)}`)
+    })
+  } else {
+    alert('PWA install functions not available')
+  }
 }
 
 // SEO

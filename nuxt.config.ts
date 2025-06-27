@@ -17,9 +17,9 @@ export default defineNuxtConfig({
   // CSS
   css: ["~/assets/app.css"],
 
-  // TypeScript
   typescript: {
-    typeCheck: false
+    typeCheck: false,
+    strict: false
   },
 
   // Módulos essenciais + PWA

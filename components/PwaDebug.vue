@@ -1,212 +1,215 @@
 <template>
-  <div class="card bg-base-200 shadow-lg mb-4">
-    <div class="card-body">
-      <h2 class="card-title">🔍 PWA Debug Info</h2>
-      
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-        <div>
-          <h3 class="font-bold mb-2">Critérios de Instalação:</h3>
-          <ul class="space-y-1">
-            <li :class="checks.https ? 'text-success' : 'text-error'">
-              {{ checks.https ? '✅' : '❌' }} HTTPS: {{ checks.https }}
-            </li>
-            <li :class="checks.manifest ? 'text-success' : 'text-error'">
-              {{ checks.manifest ? '✅' : '❌' }} Manifest: {{ checks.manifest }}
-            </li>
-            <li :class="checks.serviceWorker ? 'text-success' : 'text-error'">
-              {{ checks.serviceWorker ? '✅' : '❌' }} Service Worker: {{ checks.serviceWorker }}
-            </li>
-            <li :class="checks.icons ? 'text-success' : 'text-error'">
-              {{ checks.icons ? '✅' : '❌' }} Ícones: {{ checks.icons }}
-            </li>
-            <li :class="checks.notInstalled ? 'text-success' : 'text-error'">
-              {{ checks.notInstalled ? '✅' : '❌' }} Não instalado: {{ checks.notInstalled }}
-            </li>
-          </ul>
+  <div class="min-h-screen bg-base-100">
+    <div class="container mx-auto px-4 py-8">
+      <!-- Header -->
+      <div class="text-center mb-8">
+        <h1 class="text-4xl font-bold text-primary mb-4">
+          AbaetefestPro
+        </h1>
+        <p class="text-lg text-base-content/70">
+          Aplicação PWA com Nuxt 3 + DaisyUI
+        </p>
+      </div>
+
+      <!-- PWA Debug (remover em produção) -->
+      <PWADebug />
+
+      <!-- PWA Status Cards -->
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+        <div class="card bg-base-200 shadow-lg">
+          <div class="card-body">
+            <h2 class="card-title">
+              <Icon name="heroicons:device-phone-mobile" class="h-6 w-6" />
+              PWA Status
+            </h2>
+            <p class="text-sm">{{ pwaStatus }}</p>
+            <div class="card-actions justify-end">
+              <div class="badge badge-primary">{{ isOnline ? 'Online' : 'Offline' }}</div>
+            </div>
+          </div>
         </div>
-        
-        <div>
-          <h3 class="font-bold mb-2">Status Atual:</h3>
-          <ul class="space-y-1">
-            <li>
-              <strong>Display Mode:</strong> {{ displayMode }}
-            </li>
-            <li>
-              <strong>User Agent:</strong> {{ isMobile ? 'Mobile' : 'Desktop' }}
-            </li>
-            <li>
-              <strong>Browser:</strong> {{ browserInfo }}
-            </li>
-            <li>
-              <strong>Prompt Available:</strong> {{ promptAvailable ? 'Sim' : 'Não' }}
-            </li>
-            <li>
-              <strong>Already Prompted:</strong> {{ alreadyPrompted ? 'Sim' : 'Não' }}
-            </li>
-          </ul>
+
+        <div class="card bg-base-200 shadow-lg">
+          <div class="card-body">
+            <h2 class="card-title">
+              <Icon name="heroicons:wifi" class="h-6 w-6" />
+              Conexão
+            </h2>
+            <p class="text-sm">{{ networkStatus }}</p>
+            <div class="card-actions justify-end">
+              <div :class="connectionClass">{{ connectionType }}</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card bg-base-200 shadow-lg">
+          <div class="card-body">
+            <h2 class="card-title">
+              <Icon name="heroicons:cog-6-tooth" class="h-6 w-6" />
+              Service Worker
+            </h2>
+            <p class="text-sm">{{ swStatus }}</p>
+            <div class="card-actions justify-end">
+              <div :class="swClass">{{ swState }}</div>
+            </div>
+          </div>
         </div>
       </div>
 
-      <div class="card-actions justify-end mt-4">
+      <!-- Actions -->
+      <div class="text-center">
         <button 
-          class="btn btn-sm btn-primary" 
-          @click="forcePrompt"
-          :disabled="!canForcePrompt"
+          class="btn btn-primary btn-lg mr-4" 
+          @click="checkForUpdates"
+          :disabled="loading"
         >
-          Forçar Prompt
+          <Icon v-if="loading" name="heroicons:arrow-path" class="h-5 w-5 animate-spin" />
+          <Icon v-else name="heroicons:arrow-path" class="h-5 w-5" />
+          Verificar Atualizações
         </button>
-        <button class="btn btn-sm btn-outline" @click="checkManifest">
-          Verificar Manifest
+        
+        <button class="btn btn-outline btn-lg mr-4" @click="showPWAInfo">
+          <Icon name="heroicons:information-circle" class="h-5 w-5" />
+          Info PWA
         </button>
-        <button class="btn btn-sm btn-ghost" @click="resetPrompt">
-          Reset
-        </button>
-      </div>
 
-      <!-- Manifest Info -->
-      <div v-if="manifestData" class="mt-4 p-4 bg-base-300 rounded">
-        <h4 class="font-bold mb-2">Manifest Data:</h4>
-        <pre class="text-xs overflow-x-auto">{{ JSON.stringify(manifestData, null, 2) }}</pre>
+        <button class="btn btn-secondary btn-lg" @click="debugInstall">
+          <Icon name="heroicons:wrench-screwdriver" class="h-5 w-5" />
+          Debug Install
+        </button>
       </div>
     </div>
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
 
-const checks = ref({
-  https: false,
-  manifest: false,
-  serviceWorker: false,
-  icons: false,
-  notInstalled: false
+const isOnline = ref(true)
+const loading = ref(false)
+const serviceWorkerRegistration = ref(null)
+
+const pwaStatus = computed(() => {
+  if (import.meta.client) {
+    return window.matchMedia('(display-mode: standalone)').matches 
+      ? 'Instalado como PWA' 
+      : 'Executando no navegador'
+  }
+  return 'Verificando...'
 })
 
-const promptAvailable = ref(false)
-const alreadyPrompted = ref(false)
-const manifestData = ref(null)
-let deferredPrompt = null
+const networkStatus = computed(() => {
+  if (!import.meta.client) return 'Verificando...'
+  return isOnline.value ? 'Conectado à internet' : 'Modo offline'
+})
 
-const displayMode = computed(() => {
+const connectionType = computed(() => {
   if (!import.meta.client) return 'Unknown'
-  
-  if (window.matchMedia('(display-mode: standalone)').matches) return 'Standalone (PWA)'
-  if (window.matchMedia('(display-mode: fullscreen)').matches) return 'Fullscreen'
-  if (window.matchMedia('(display-mode: minimal-ui)').matches) return 'Minimal UI'
-  return 'Browser'
+  const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection
+  return connection ? connection.effectiveType || 'Unknown' : 'Unknown'
 })
 
-const isMobile = computed(() => {
-  if (!mport.meta.client) return false
-  return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
+const connectionClass = computed(() => {
+  const type = connectionType.value
+  return {
+    'badge badge-success': type === '4g',
+    'badge badge-warning': type === '3g',
+    'badge badge-error': type === '2g' || type === 'slow-2g',
+    'badge badge-ghost': type === 'Unknown'
+  }
 })
 
-const browserInfo = computed(() => {
-  if (!mport.meta.client) return 'Unknown'
-  
-  const ua = navigator.userAgent
-  if (ua.includes('Chrome')) return 'Chrome'
-  if (ua.includes('Firefox')) return 'Firefox'
-  if (ua.includes('Safari')) return 'Safari'
-  if (ua.includes('Edge')) return 'Edge'
-  return 'Other'
+const swStatus = computed(() => {
+  if (!serviceWorkerRegistration.value) return 'Não instalado'
+  return 'Ativo e funcionando'
 })
 
-const canForcePrompt = computed(() => {
-  return promptAvailable.value && deferredPrompt && !alreadyPrompted.value
+const swState = computed(() => {
+  return serviceWorkerRegistration.value ? 'Ativo' : 'Inativo'
 })
 
-onMounted(async () => {
-  if (!mport.meta.client) return
-
-  await nextTick()
-  performChecks()
-  setupPromptListeners()
+const swClass = computed(() => {
+  return serviceWorkerRegistration.value 
+    ? 'badge badge-success' 
+    : 'badge badge-error'
 })
 
-const performChecks = async () => {
-  // Check HTTPS
-  checks.value.https = location.protocol === 'https:' || location.hostname === 'localhost'
+onMounted(() => {
+  // Monitor online/offline status
+  if (import.meta.client) {
+    isOnline.value = navigator.onLine
+    
+    window.addEventListener('online', () => {
+      isOnline.value = true
+    })
+    
+    window.addEventListener('offline', () => {
+      isOnline.value = false
+    })
 
-  // Check if already installed
-  checks.value.notInstalled = !window.matchMedia('(display-mode: standalone)').matches
-
-  // Check Service Worker
-  if ('serviceWorker' in navigator) {
-    try {
-      const registration = await navigator.serviceWorker.getRegistration()
-      checks.value.serviceWorker = !!registration
-    } catch (e) {
-      checks.value.serviceWorker = false
+    // Check for service worker
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.ready.then((registration) => {
+        serviceWorkerRegistration.value = registration
+      })
     }
   }
+})
 
-  // Check for prompt history
-  alreadyPrompted.value = localStorage.getItem('pwa-install-dismissed') === 'true'
-
-  // Check manifest
-  await checkManifest()
-}
-
-const setupPromptListeners = () => {
-  // Listen for install prompt
-  window.addEventListener('beforeinstallprompt', (e) => {
-    console.log('📱 beforeinstallprompt fired!')
-    e.preventDefault()
-    deferredPrompt = e
-    promptAvailable.value = true
-  })
-
-  // Listen for app installed
-  window.addEventListener('appinstalled', () => {
-    console.log('🎉 App installed!')
-    promptAvailable.value = false
-    deferredPrompt = null
-  })
-}
-
-const checkManifest = async () => {
+const checkForUpdates = async () => {
+  loading.value = true
+  
   try {
-    const response = await fetch('/manifest.webmanifest')
-    if (response.ok) {
-      manifestData.value = await response.json()
-      checks.value.manifest = true
+    if ('serviceWorker' in navigator) {
+      const registration = await navigator.serviceWorker.ready
+      await registration.update()
       
-      // Check icons
-      checks.value.icons = manifestData.value.icons && manifestData.value.icons.length > 0
-    } else {
-      checks.value.manifest = false
-      console.error('Manifest not found or invalid')
+      // Show success message
+      // You can add a toast notification here
+      console.log('Verificação de atualização concluída')
     }
-  } catch (e) {
-    checks.value.manifest = false
-    console.error('Error fetching manifest:', e)
+  } catch (error) {
+    console.error('Erro ao verificar atualizações:', error)
+  } finally {
+    loading.value = false
   }
 }
 
-const forcePrompt = async () => {
-  if (deferredPrompt) {
-    console.log('🚀 Forcing install prompt...')
-    deferredPrompt.prompt()
-    
-    const { outcome } = await deferredPrompt.userChoice
-    console.log('👤 User choice:', outcome)
-    
-    if (outcome === 'accepted') {
-      promptAvailable.value = false
-    }
-    
-    deferredPrompt = null
+const showPWAInfo = () => {
+  // You can add a modal with PWA information here
+  alert(`
+PWA Info:
+- Status: ${pwaStatus.value}
+- Online: ${isOnline.value ? 'Sim' : 'Não'}
+- Service Worker: ${swState.value}
+- Conexão: ${connectionType.value}
+  `)
+}
+
+const debugInstall = () => {
+  if (import.meta.client && (window as any).checkPWAStatus) {
+    (window as any).checkPWAStatus()
+  }
+  
+  if (import.meta.client && (window as any).triggerPWAInstall) {
+    console.log('🧪 Testing manual install trigger...')
+    ;(window as any).triggerPWAInstall().then((result: any) => {
+      console.log('Manual install result:', result)
+      alert(`Install result: ${JSON.stringify(result, null, 2)}`)
+    })
   } else {
-    console.log('❌ No deferred prompt available')
-    alert('Prompt de instalação não disponível. Verifique os critérios PWA.')
+    alert('PWA install functions not available')
   }
 }
 
-const resetPrompt = () => {
-  localStorage.removeItem('pwa-install-dismissed')
-  alreadyPrompted.value = false
-  console.log('🔄 Prompt reset - recarregue a página')
-}
+// SEO
+useHead({
+  title: 'AbaetefestPro - PWA with Nuxt 3',
+  meta: [
+    { name: 'description', content: 'Progressive Web App desenvolvida com Nuxt 3 e DaisyUI' },
+    { property: 'og:title', content: 'AbaetefestPro PWA' },
+    { property: 'og:description', content: 'Progressive Web App desenvolvida com Nuxt 3 e DaisyUI' },
+    { property: 'og:type', content: 'website' }
+  ]
+})
 </script>
