@@ -9,12 +9,12 @@
 
 # Functions directory (padrão do Netlify)
 [functions]
-  directory = ".vercel/output/functions"
+  directory = ".vercel/output/functions/__nitro.func"
 
 # Redirects para SSR (CORRIGIDO - sem barra final)
 [[redirects]]
   from = "/*"
-  to = "/.vercel/output/functions"
+  to = ".vercel/output/functions/__nitro.func"
   status = 200
 
 # Headers para PWA (SEM DUPLICATAS)
