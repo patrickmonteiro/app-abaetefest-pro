@@ -1,4 +1,4 @@
-// nuxt.config.ts - Configuração PWA corrigida
+// nuxt.config.ts - Configuração corrigida para deploy no Netlify
 import tailwindcss from "@tailwindcss/vite";
 
 export default defineNuxtConfig({
@@ -35,26 +35,36 @@ export default defineNuxtConfig({
   // Modo estático
   ssr: false,
   
-  // Nitro para geração estática
+  // Nitro configurado para Netlify
   nitro: {
+    preset: 'netlify',
     prerender: {
       routes: ['/']
     }
   },
 
-  // Configuração PWA CORRIGIDA
+  // Configuração PWA CORRIGIDA para Netlify
   pwa: {
+    // Registro automático do manifest no Netlify
+    registerWebManifestInRouteRules: true,
+    
     registerType: 'autoUpdate',
     
-    // Workbox configurado corretamente
+    // Configuração específica para build estático
+    filename: 'sw.js',
+    
+    // Workbox configurado para Netlify
     workbox: {
+      globDirectory: 'dist',
       navigateFallback: '/',
       navigateFallbackDenylist: [
         /^\/sw\.js$/,
         /^\/workbox-.*\.js$/,
         /^\/manifest\.webmanifest$/,
         /^\/_nuxt\//,
-        /^\/api\//
+        /^\/api\//,
+        /^\/admin/,
+        /\.map$/
       ],
       globPatterns: [
         '**/*.{js,css,html,png,svg,ico,jpg,jpeg,gif,webp,woff,woff2,ttf,eot}'
@@ -62,6 +72,11 @@ export default defineNuxtConfig({
       cleanupOutdatedCaches: true,
       skipWaiting: true,
       clientsClaim: true,
+      
+      // Configuração específica para assets estáticos
+      modifyURLPrefix: {
+        '/_nuxt/': '/_nuxt/'
+      },
       
       runtimeCaching: [
         {
@@ -72,11 +87,14 @@ export default defineNuxtConfig({
             expiration: {
               maxEntries: 10,
               maxAgeSeconds: 60 * 60 * 24 * 365
+            },
+            cacheKeyWillBeUsed: async ({ request }) => {
+              return `${request.url}?v=1`
             }
           }
         },
         {
-          urlPattern: /\.(?:png|jpg|jpeg|svg|gif|webp)$/,
+          urlPattern: /\.(?:png|jpg|jpeg|svg|gif|webp|ico)$/,
           handler: 'CacheFirst',
           options: {
             cacheName: 'images-cache',
@@ -105,21 +123,22 @@ export default defineNuxtConfig({
       periodicSyncForUpdates: 20
     },
     
-    // Manifest CORRIGIDO com todos os campos obrigatórios
+    // Manifest OTIMIZADO para produção
     manifest: {
+      id: '/',
       name: 'AbaetefestPro - Festival Management',
       short_name: 'AbaetefestPro',
       description: 'Aplicação completa para gerenciamento de festivais com tecnologia PWA',
       theme_color: '#3b82f6',
       background_color: '#ffffff',
       display: 'standalone',
-      orientation: 'portrait',
+      orientation: 'portrait-primary',
       scope: '/',
-      start_url: '/',
+      start_url: '/?utm_source=pwa',
       lang: 'pt-BR',
       categories: ['entertainment', 'music', 'events'],
       
-      // Ícones OBRIGATÓRIOS - você precisa criar estes arquivos
+      // Ícones OBRIGATÓRIOS com paths absolutos
       icons: [
         {
           src: '/icon-72x72.png',
@@ -169,6 +188,22 @@ export default defineNuxtConfig({
           type: 'image/png',
           purpose: 'any maskable'
         }
+      ],
+      
+      // Configurações adicionais para PWA
+      screenshots: [
+        {
+          src: '/screenshot-wide.png',
+          sizes: '1280x720',
+          type: 'image/png',
+          form_factor: 'wide'
+        },
+        {
+          src: '/screenshot-narrow.png',
+          sizes: '720x1280',
+          type: 'image/png',
+          form_factor: 'narrow'
+        }
       ]
     },
     
@@ -178,6 +213,7 @@ export default defineNuxtConfig({
     }
   },
 
+  // Configuração app com links corretos para manifest
   app: {
     head: {
       charset: 'utf-8',
@@ -193,9 +229,27 @@ export default defineNuxtConfig({
         { name: 'format-detection', content: 'telephone=no' }
       ],
       link: [
+        // Manifest link será injetado automaticamente pelo PWA module
         { rel: 'apple-touch-icon', href: '/icon-152x152.png' },
-        { rel: 'mask-icon', href: '/safari-pinned-tab.svg', color: '#3b82f6' }
+        { rel: 'mask-icon', href: '/safari-pinned-tab.svg', color: '#3b82f6' },
+        { rel: 'icon', type: 'image/x-icon', href: '/favicon.ico' }
       ]
+    }
+  },
+
+  // Route rules para garantir que o manifest seja servido corretamente
+  routeRules: {
+    '/manifest.webmanifest': { 
+      headers: { 
+        'Content-Type': 'application/manifest+json',
+        'Cache-Control': 'public, max-age=0, must-revalidate'
+      } 
+    },
+    '/sw.js': { 
+      headers: { 
+        'Content-Type': 'application/javascript',
+        'Cache-Control': 'public, max-age=0, must-revalidate'
+      } 
     }
   },
 
