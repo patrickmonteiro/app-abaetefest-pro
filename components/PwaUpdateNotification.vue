@@ -25,16 +25,24 @@
       <div>
         <Icon name="heroicons:device-phone-mobile" class="h-6 w-6" />
         <div>
-          <h3 class="font-bold">Instalar App</h3>
-          <div class="text-xs">Adicione este app à sua tela inicial!</div>
+          <h3 class="font-bold">{{ isSafari ? 'Adicionar à Tela Inicial' : 'Instalar App' }}</h3>
+          <div class="text-xs">
+            {{ isSafari 
+              ? 'Toque no botão de compartilhar e selecione "Adicionar à Tela de Início"' 
+              : 'Adicione este app à sua tela inicial!' 
+            }}
+          </div>
         </div>
       </div>
       <div class="flex-none">
         <button class="btn btn-sm btn-ghost" @click="dismissInstall">
-          Não
+          {{ isSafari ? 'Entendi' : 'Não' }}
         </button>
-        <button class="btn btn-sm btn-success" @click="installApp">
+        <button v-if="!isSafari" class="btn btn-sm btn-success" @click="installApp">
           Instalar
+        </button>
+        <button v-if="isSafari" class="btn btn-sm btn-info" @click="showSafariInstructions">
+          Como fazer?
         </button>
       </div>
     </div>
@@ -46,8 +54,15 @@ import { ref, onMounted } from 'vue'
 
 const showUpdatePrompt = ref(false)
 const showInstallPrompt = ref(false)
-let deferredPrompt: BeforeInstallPromptEvent | null = null
-let updateSW: (() => void) | null = null
+let deferredPrompt: any = null
+let updateSW: any = null
+
+// Detectar Safari (mais preciso)
+const isSafari = computed(() => {
+  if (!import.meta.client) return false
+  const ua = navigator.userAgent
+  return ua.includes('Safari') && !ua.includes('Chrome') && !ua.includes('Edg')
+})
 
 onMounted(async () => {
   if (!import.meta.client) return
@@ -111,18 +126,20 @@ onMounted(async () => {
     return
   }
 
-  // iOS specific handling
-  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent)
-  const isInStandaloneMode = window.matchMedia('(display-mode: standalone)').matches
-
-  if (isIOS && !isInStandaloneMode) {
-    const iosDismissed = localStorage.getItem('ios-install-dismissed')
-    if (!iosDismissed) {
+  // Safari/iOS specific handling
+  if (isSafari.value && !window.matchMedia('(display-mode: standalone)').matches) {
+    const safariDismissed = localStorage.getItem('safari-install-dismissed')
+    const lastDismissed = localStorage.getItem('safari-install-dismissed-time')
+    const now = Date.now()
+    
+    // Show again after 3 days for Safari
+    if (!safariDismissed || (lastDismissed && (now - parseInt(lastDismissed)) > 3 * 24 * 60 * 60 * 1000)) {
       setTimeout(() => {
         if (!showInstallPrompt.value) {
+          console.log('🍎 Showing Safari install prompt')
           showInstallPrompt.value = true
         }
-      }, 8000)
+      }, 5000) // Show after 5 seconds
     }
   }
 })
@@ -140,9 +157,9 @@ const installApp = async () => {
   console.log('🚀 Install button clicked')
   
   // Try global function first
-  if (typeof window !== 'undefined' && (window as any).triggerPWAInstall) {
+  if (import.meta.client && window.triggerPWAInstall) {
     try {
-      const result = await (window as any).triggerPWAInstall()
+      const result = await window.triggerPWAInstall()
       console.log('Global install result:', result)
       
       if (result.outcome === 'accepted') {
@@ -221,11 +238,39 @@ const dismissInstall = () => {
   console.log('❌ Install prompt dismissed by user')
   showInstallPrompt.value = false
   
-  // Remember dismissal for 7 days
-  localStorage.setItem('pwa-install-dismissed', 'true')
-  localStorage.setItem('pwa-install-dismissed-time', Date.now().toString())
+  if (isSafari.value) {
+    // Remember dismissal for Safari (3 days)
+    localStorage.setItem('safari-install-dismissed', 'true')
+    localStorage.setItem('safari-install-dismissed-time', Date.now().toString())
+  } else {
+    // Remember dismissal for other browsers (7 days)
+    localStorage.setItem('pwa-install-dismissed', 'true')
+    localStorage.setItem('pwa-install-dismissed-time', Date.now().toString())
+  }
   
   // Clear the prompt
   deferredPrompt = null
+}
+
+const showSafariInstructions = () => {
+  showInstallPrompt.value = false
+  
+  // Show detailed Safari instructions
+  alert(`📱 Como adicionar à tela inicial no Safari:
+
+🍎 No Mac:
+1. Clique no botão de compartilhar (⬆️) na barra de ferramentas
+2. Selecione "Adicionar ao Dock"
+
+📱 No iPhone/iPad:
+1. Toque no botão de compartilhar (⬆️)
+2. Role para baixo e toque em "Adicionar à Tela de Início"
+3. Toque em "Adicionar"
+
+✨ O app aparecerá como um ícone na sua tela inicial!`)
+  
+  // Remember that user saw instructions
+  localStorage.setItem('safari-install-dismissed', 'true')
+  localStorage.setItem('safari-install-dismissed-time', Date.now().toString())
 }
 </script>

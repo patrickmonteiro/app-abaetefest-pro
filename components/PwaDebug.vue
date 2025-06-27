@@ -94,7 +94,7 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
 
 const basicChecks = ref({
@@ -138,6 +138,9 @@ const log = (message) => {
 
 onMounted(() => {
   if (import.meta.client) {
+    // Track page load time
+    sessionStorage.setItem('page-load-time', Date.now().toString())
+    
     checkAll()
     detectBrowser()
   }
@@ -159,6 +162,32 @@ const checkAll = async () => {
 
   // Check Manifest
   await checkManifest()
+
+  // Check if beforeinstallprompt was already fired
+  const promptFired = sessionStorage.getItem('beforeinstallprompt-fired')
+  log(`beforeinstallprompt already fired this session: ${!!promptFired}`)
+  
+  // Check user engagement heuristics
+  const now = Date.now()
+  const pageLoadTime = parseInt(sessionStorage.getItem('page-load-time') || now.toString())
+  const timeOnPage = now - pageLoadTime
+  log(`Time on page: ${Math.round(timeOnPage / 1000)}s`)
+  
+  // Chrome requirements check
+  if (browserInfo.value.name === 'Chrome') {
+    log('🔍 Verificando critérios específicos do Chrome:')
+    log(`- Versão Chrome: ${browserInfo.value.version} (mín: 68)`)
+    log(`- Tempo na página: ${Math.round(timeOnPage / 1000)}s (mín: 30s para alguns casos)`)
+    log(`- User gesture required: true`)
+    
+    // Check if user has already dismissed
+    const dismissed = localStorage.getItem('pwa-install-dismissed')
+    const dismissedTime = localStorage.getItem('pwa-install-dismissed-time')
+    if (dismissed) {
+      const daysSinceDismissed = dismissedTime ? Math.floor((now - parseInt(dismissedTime)) / (24 * 60 * 60 * 1000)) : 0
+      log(`- Usuário rejeitou há ${daysSinceDismissed} dias`)
+    }
+  }
 
   log('✅ Verificação completa finalizada')
 }
@@ -221,25 +250,26 @@ const detectBrowser = () => {
   let version = 'Unknown'
   let supportsPWA = false
 
-  if (ua.includes('Chrome')) {
+  // Mais específico para Chrome no Mac
+  if (ua.includes('Chrome') && !ua.includes('Edg') && !ua.includes('OPR')) {
     name = 'Chrome'
     supportsPWA = true
     const match = ua.match(/Chrome\/(\d+)/)
     if (match) version = match[1]
+  } else if (ua.includes('Edg')) {
+    name = 'Edge'
+    supportsPWA = true
+    const match = ua.match(/Edg\/(\d+)/)
+    if (match) version = match[1]
   } else if (ua.includes('Firefox')) {
     name = 'Firefox'
-    supportsPWA = false
+    supportsPWA = false // Firefox não suporta bem
     const match = ua.match(/Firefox\/(\d+)/)
     if (match) version = match[1]
   } else if (ua.includes('Safari') && !ua.includes('Chrome')) {
     name = 'Safari'
-    supportsPWA = false // Safari tem suporte limitado
+    supportsPWA = false
     const match = ua.match(/Version\/(\d+)/)
-    if (match) version = match[1]
-  } else if (ua.includes('Edge')) {
-    name = 'Edge'
-    supportsPWA = true
-    const match = ua.match(/Edg\/(\d+)/)
     if (match) version = match[1]
   }
 
@@ -250,7 +280,12 @@ const detectBrowser = () => {
     supportsPWA
   }
 
-  log(`Browser: ${name} ${version} (PWA: ${supportsPWA})`)
+  log(`User Agent: ${ua}`)
+  log(`Browser: ${name} ${version} (PWA beforeinstallprompt: ${supportsPWA})`)
+  
+  if (name === 'Chrome' && !supportsPWA) {
+    log('⚠️ Chrome detectado mas sem suporte PWA - verificar critérios')
+  }
 }
 
 const downloadManifest = async () => {

@@ -1,13 +1,17 @@
 // plugins/pwa-install.client.ts
 export default defineNuxtPlugin(() => {
   // Global variable to store the prompt
-  let globalDeferredPrompt: BeforeInstallPromptEvent | null = null
+  let globalDeferredPrompt: any = null
   
   // Make it available globally
   if (import.meta.client) {
     // Listen for the beforeinstallprompt event
-    window.addEventListener('beforeinstallprompt', (e: BeforeInstallPromptEvent) => {
+    window.addEventListener('beforeinstallprompt', (e: any) => {
       console.log('🎯 beforeinstallprompt event fired!')
+      
+      // Track that it fired
+      sessionStorage.setItem('beforeinstallprompt-fired', 'true')
+      sessionStorage.setItem('beforeinstallprompt-time', Date.now().toString())
       
       // Prevent Chrome 67 and earlier from automatically showing the prompt
       e.preventDefault()
@@ -16,7 +20,7 @@ export default defineNuxtPlugin(() => {
       globalDeferredPrompt = e
       
       // Make it available globally
-      ;(window as any).__pwaInstallPrompt = e
+      window.__pwaInstallPrompt = e
       
       // Dispatch custom event for components to listen
       window.dispatchEvent(new CustomEvent('pwa-install-available', {
@@ -32,7 +36,7 @@ export default defineNuxtPlugin(() => {
       
       // Clear the prompt
       globalDeferredPrompt = null
-      ;(window as any).__pwaInstallPrompt = null
+      window.__pwaInstallPrompt = null
       
       // Dispatch custom event
       window.dispatchEvent(new CustomEvent('pwa-installed'))
@@ -43,8 +47,8 @@ export default defineNuxtPlugin(() => {
     })
 
     // Helper function to trigger install
-    ;(window as any).triggerPWAInstall = async () => {
-      const prompt = globalDeferredPrompt || (window as any).__pwaInstallPrompt
+    window.triggerPWAInstall = async () => {
+      const prompt = globalDeferredPrompt || window.__pwaInstallPrompt
       
       if (prompt) {
         try {
@@ -58,7 +62,7 @@ export default defineNuxtPlugin(() => {
           
           // Clear the prompt regardless of outcome
           globalDeferredPrompt = null
-          ;(window as any).__pwaInstallPrompt = null
+          window.__pwaInstallPrompt = null
           
           return choiceResult
         } catch (error) {
@@ -72,7 +76,7 @@ export default defineNuxtPlugin(() => {
     }
 
     // Debug helper
-    ;(window as any).checkPWAStatus = () => {
+    window.checkPWAStatus = () => {
       console.log('PWA Status Check:')
       console.log('- Install prompt available:', !!globalDeferredPrompt)
       console.log('- Is standalone:', window.matchMedia('(display-mode: standalone)').matches)
