@@ -50,70 +50,84 @@ let deferredPrompt = null
 let updateSW = null
 
 onMounted(async () => {
+  if (!process.client) return
+  
   await nextTick()
   
-  // PWA Update Logic
-  if ('serviceWorker' in navigator) {
-    try {
-      const { Workbox } = await import('workbox-window')
-      const wb = new Workbox('/sw.js')
+  // PWA Update Logic - mais simples e robusto
+  try {
+    if ('serviceWorker' in navigator) {
+      const registration = await navigator.serviceWorker.getRegistration()
       
-      wb.addEventListener('waiting', () => {
-        showUpdatePrompt.value = true
-        updateSW = () => {
-          wb.addEventListener('controlling', () => {
-            window.location.reload()
-          })
-          wb.messageSkipWaiting()
-        }
-      })
-      
-      wb.register()
-    } catch (e) {
-      console.error('Workbox registration failed:', e)
+      if (registration) {
+        registration.addEventListener('updatefound', () => {
+          const newWorker = registration.installing
+          if (newWorker) {
+            newWorker.addEventListener('statechange', () => {
+              if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                showUpdatePrompt.value = true
+                updateSW = () => {
+                  newWorker.postMessage({ type: 'SKIP_WAITING' })
+                  window.location.reload()
+                }
+              }
+            })
+          }
+        })
+      }
     }
+  } catch (error) {
+    console.warn('SW update check failed:', error)
   }
 
-  // Install Prompt Logic with debugging
-  window.addEventListener('beforeinstallprompt', (e) => {
-    console.log('📱 Install prompt triggered!')
+  // Install Prompt Logic with better detection
+  const handleInstallPrompt = (e) => {
+    console.log('📱 Install prompt event triggered!')
     e.preventDefault()
     deferredPrompt = e
     
     // Check if user previously dismissed
     const dismissed = localStorage.getItem('pwa-install-dismissed')
-    if (dismissed !== 'true') {
-      showInstallPrompt.value = true
+    const lastDismissed = localStorage.getItem('pwa-install-dismissed-time')
+    const now = Date.now()
+    
+    // Show again after 7 days
+    if (!dismissed || (lastDismissed && (now - parseInt(lastDismissed)) > 7 * 24 * 60 * 60 * 1000)) {
+      setTimeout(() => {
+        showInstallPrompt.value = true
+      }, 2000) // Show after 2 seconds of page load
     }
-  })
+  }
 
-  // Hide install prompt if already installed
+  window.addEventListener('beforeinstallprompt', handleInstallPrompt)
+
+  // App installed
   window.addEventListener('appinstalled', () => {
     console.log('🎉 App installed successfully!')
     showInstallPrompt.value = false
     deferredPrompt = null
     localStorage.removeItem('pwa-install-dismissed')
+    localStorage.removeItem('pwa-install-dismissed-time')
   })
 
-  // Additional check for iOS
-  if (isIOS() && !isInStandaloneMode()) {
-    // For iOS, show custom install instructions after a delay
-    setTimeout(() => {
-      if (!localStorage.getItem('ios-install-dismissed')) {
+  // Check if already in standalone mode
+  if (window.matchMedia('(display-mode: standalone)').matches) {
+    console.log('📱 Already running as PWA')
+  }
+
+  // iOS detection and handling
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent)
+  const isInStandaloneMode = window.matchMedia('(display-mode: standalone)').matches
+
+  if (isIOS && !isInStandaloneMode) {
+    const iosDismissed = localStorage.getItem('ios-install-dismissed')
+    if (!iosDismissed) {
+      setTimeout(() => {
         showInstallPrompt.value = true
-      }
-    }, 3000)
+      }, 5000) // Show iOS prompt after 5 seconds
+    }
   }
 })
-
-// Helper functions
-const isIOS = () => {
-  return /iPad|iPhone|iPod/.test(navigator.userAgent)
-}
-
-const isInStandaloneMode = () => {
-  return window.matchMedia('(display-mode: standalone)').matches
-}
 
 const updateApp = () => {
   showUpdatePrompt.value = false
